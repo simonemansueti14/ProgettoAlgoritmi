@@ -1,0 +1,64 @@
+{
+  "out\\grid_20x20_seed1.csv": {
+    "OtoD": {
+      "avg_length": Infinity,
+      "avg_time": 2.833333383023273e-06,
+      "last_seq": [],
+      "valid": false,
+      "variant": 0
+    },
+    "DtoO": {
+      "avg_length": Infinity,
+      "avg_time": 1.3999997463542968e-06,
+      "last_seq": [],
+      "valid": false,
+      "variant": 0
+    }
+  },
+  "out\\grid_20x20_seed2.csv": {
+    "OtoD": {
+      "avg_length": 21.213203435596427,
+      "avg_time": 0.0005741666670170767,
+      "last_seq": [
+        [
+          [
+            0,
+            0
+          ],
+          0
+        ],
+        [
+          [
+            15,
+            15
+          ],
+          1
+        ]
+      ],
+      "valid": true,
+      "variant": 0
+    },
+    "DtoO": {
+      "avg_length": 21.213203435596427,
+      "avg_time": 0.0003171000001505793,
+      "last_seq": [
+        [
+          [
+            15,
+            15
+          ],
+          0
+        ],
+        [
+          [
+            0,
+            0
+          ],
+          1
+        ]
+      ],
+      "valid": true,
+      "variant": 0
+    }
+  }
+}
