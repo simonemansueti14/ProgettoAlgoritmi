@@ -1,0 +1,36 @@
+{
+  "config": {
+    "width": 80,
+    "height": 80,
+    "seed": 42,
+    "simple": 1200,
+    "agglomerates": 0,
+    "agg_min": 3,
+    "agg_max": 7,
+    "diagonals": 0,
+    "diag_min": 3,
+    "diag_max": 10,
+    "frames": 0,
+    "frame_minw": 5,
+    "frame_minh": 4,
+    "frame_maxw": 15,
+    "frame_maxh": 10,
+    "frame_thick": 1,
+    "bars": 0,
+    "bar_min": 4,
+    "bar_max": 12,
+    "bar_thick": 1,
+    "out_dir": "out/"
+  },
+  "placed": {
+    "simple": {
+      "cells": 1200
+    }
+  },
+  "grid": {
+    "height": 80,
+    "width": 80,
+    "occupied_cells": 1200,
+    "density": 0.1875
+  }
+}
