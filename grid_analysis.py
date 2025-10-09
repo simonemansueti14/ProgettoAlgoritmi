@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
+r"""
 Compito 2 ? Analisi di griglie (contesto, complemento, distanza libera)
 Algoritmi e Strutture Dati (a.a. 2024/25)
 
@@ -11,12 +11,12 @@ Definizioni:
 - Cammino libero = sequenza di mosse diagonali in un quadrante + mosse orizzontali/verticali.
 - Contesto(O) = celle raggiungibili con cammino libero di tipo 1.
 - Complemento(O) = celle raggiungibili con cammino libero di tipo 2.
-- Distanza libera dlib(O,D) = sqrt(2)*?min + (?max - ?min).
+- Distanza libera dlib(O,D) = \sqrt2 * \Delta_{min} + \Delta_{max} - \Delta_{min} 
 """
 
 #argparse importa la libreria standard argparse che serve per leggere gli argomenti dalla riga di comando
-import argparse, json, csv, math
-from typing import List, Tuple, Set  #tipi di dato usati per annotare le funzioni 
+import argparse, csv, math
+from typing import Tuple, Set  #tipi di dato usati per annotare le funzioni 
 from pathlib import Path #gestisce i percorsi dei file
 
 #importo la classe Grid dal file precedente
@@ -43,15 +43,18 @@ def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cel
 
     rows, cols = g.h, g.w #dimensioni della griglia
     r0, c0 = O #coordinate della cella di origine
+    
+    if g.in_bounds(r0, c0) is False:
+        raise ValueError(f"Cella origine O={O} fuori dai limiti della griglia {rows}x{cols}")
 
     #scorre tutte le celle della griglia
-    #se una cella (r,c) è un ostacolo la salta con continue
+    #se una cella (r,c) Ã¨ un ostacolo la salta con continue
     for r in range(rows):
         for c in range(cols):
             if not g.is_free(r, c):
                 continue
             #calcola la distanza (in righe e colonne) della cella origine O
-            #se la cella è proprio O la ignora, non ha senso includerla
+            #se la cella Ã¨ proprio O la ignora, non ha senso includerla
             dx, dy = abs(c - c0), abs(r - r0)
 
             if dx == 0 and dy == 0:
@@ -61,9 +64,9 @@ def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cel
             d1 = math.sqrt(2)*min(dx,dy) + abs(dx-dy)
             #qui distinguiamo in modo semplice: se dx>=dy -> tipo 1, se dy>dx -> tipo 2
             #divide le celle in due categorie:
-            #contesto (tipo 1) se la distanza orizzontael dx è maggiore o uguale a quella verticale dy
-            #complemento (tipo 2) se invece dy è maggiore di dx
-            #è un modo semplice per dire se il cammino libero è di tipo 1 o tipo 2
+            #contesto (tipo 1) se la distanza orizzontael dx ï¿½ maggiore o uguale a quella verticale dy
+            #complemento (tipo 2) se invece dy ï¿½ maggiore di dx
+            #ï¿½ un modo semplice per dire se il cammino libero ï¿½ di tipo 1 o tipo 2
             if dx >= dy:
                 context.add((r,c))
             else:
@@ -91,16 +94,20 @@ def main():
     ap = argparse.ArgumentParser(description="Compito 2: Analisi griglie (contesto, complemento, distanza libera)")
     ap.add_argument("--grid", required=True, help="file CSV della griglia (generato dal Compito 1)")
     ap.add_argument("--origin", type=int, nargs=2, metavar=("R","C"), required=True, help="cella origine O (riga colonna)")
-    ap.add_argument("--dest", type=int, nargs=2, metavar=("R","C"), help="cella destinazione D (opzionale)")
+    ap.add_argument("--dest", type=int, nargs=2, metavar=("R","C"), default=None, help="cella destinazione D (opzionale)")
     args = ap.parse_args() #legge i valori dati dal terminale
 
     g = load_grid_from_csv(Path(args.grid)) #carica la griglia dal csv
     O = tuple(args.origin) #converte le due coordinate (--origin) in una tupla
+    if args.dest is not None:
+        D = tuple(args.dest) #converte le due coordinate (--origin) in una tupla
 
     #calcola contesto e complemento di O e stampa a video
     context, complement = compute_context_and_complement(g, O)
 
     print(f"Origine O = {O}")
+    if args.dest is not None:
+        print(f"Destinazione D = {D}")
     print(f"Contesto(O): {len(context)} celle")
     print(f"Complemento(O): {len(complement)} celle")
 

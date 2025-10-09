@@ -74,6 +74,24 @@ class GridConfig:
     # Output
     out_dir: str | None = None
 
+    def __post_init__(self):
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("Larghezza e altezza devono essere positivi.")
+        if self.agg_min < 1 or self.agg_max < self.agg_min:
+            raise ValueError("Valore minimo cluster deve essere almeno 1 e max >= min.")
+        if self.diag_min < 2 or self.diag_max < self.diag_min:
+            raise ValueError("Valore minimo catena diagonale deve essere almeno 2 e max >= min.")
+        if self.frame_minw < 3 or self.frame_minh < 3 or self.frame_maxw < self.frame_minw or self.frame_maxh < self.frame_minh:
+            raise ValueError("Dimensioni cornici non validi.")
+        if self.frame_thick < 1:
+            raise ValueError("Spessore cornici deve essere almeno 1.")
+        if self.bar_min < 2 or self.bar_max < self.bar_min:
+            raise ValueError("Lunghezza barre non valida.")
+        if self.bar_thick < 1:
+            raise ValueError("Spessore barre deve essere almeno 1.")
+        if self.simple < 0 or self.agglomerates < 0 or self.diagonals < 0 or self.frames < 0 or self.bars < 0:
+            raise ValueError("Numero di ostacoli non può essere negativo.")
+
 # classe che rappresenta la griglia, matrice di 0 (cellalibera) e 1 (cellaostacolo)
 class Grid:
     def __init__(self, height: int, width: int): #init è il costruttore
