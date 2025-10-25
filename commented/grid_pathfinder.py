@@ -17,7 +17,7 @@ import argparse, csv, math, json, os, time
 from typing import List, Tuple, Set, Dict
 from pathlib import Path
 from grid_generator import Grid
-from grid_analysis import dlib, compute_context_and_complement
+from _2_grid_analysis import dlib, compute_context_and_complement
 
 Cell = Tuple[int, int]
 

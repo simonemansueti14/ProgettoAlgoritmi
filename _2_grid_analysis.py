@@ -18,7 +18,7 @@ Definizioni:
 import argparse, csv, math
 from typing import Tuple, Set
 from pathlib import Path
-from grid_generator import Grid
+from _1_grid_generator import Grid
 
 Cell = Tuple[int, int]
 
@@ -192,32 +192,45 @@ def load_grid_from_csv(path: Path) -> Grid:
     return g
 
 # ---------------------------------- MAIN ----------------------------------
-#crea un parser di argomenti con 3 comandi
 def main():
-    ap = argparse.ArgumentParser(description="Compito 2: Analisi griglie (contesto, complemento, distanza libera)")
-    ap.add_argument("--grid", required=True, help="file CSV della griglia (generato dal Compito 1)")
-    ap.add_argument("--origin", type=int, nargs=2, metavar=("R","C"), required=True, help="cella origine O (riga colonna)")
-    ap.add_argument("--dest", type=int, nargs=2, metavar=("R","C"), default=None, help="cella destinazione D (opzionale)")
-    args = ap.parse_args()
 
-    g = load_grid_from_csv(Path(args.grid))
-    O = tuple(args.origin)
-    if args.dest is not None:
-        D = tuple(args.dest)
+    print("=== Compito 2: Analisi griglie (contesto, complemento, distanza libera) ===\n")
+    grid_path = input("Inserisci il percorso del file CSV della griglia: ").strip()
+    g = load_grid_from_csv(Path(grid_path))
+    r0 = int(input("Inserisci riga origine O: "))
+    c0 = int(input("Inserisci colonna origine O: "))
+    O = (r0,c0)
+    calc_dest = input("Vuoi inserire una destinazione D per calcolare la distanza libera? (s/n): ").strip().lower()
+    if calc_dest == "s":
+        r1 = int(input("Inserisci riga destinazione D: "))
+        c1 = int(input("Inserisci colonna destinazione D: "))
+        D = (r1, c1)
+    else:
+        D = None
+
+    #ap = argparse.ArgumentParser(description="Compito 2: Analisi griglie (contesto, complemento, distanza libera)")
+    #ap.add_argument("--grid", required=True, help="file CSV della griglia (generato dal Compito 1)")
+    #ap.add_argument("--origin", type=int, nargs=2, metavar=("R","C"), required=True, help="cella origine O (riga colonna)")
+    #ap.add_argument("--dest", type=int, nargs=2, metavar=("R","C"), default=None, help="cella destinazione D (opzionale)")
+    #args = ap.parse_args()
+
+    #g = load_grid_from_csv(Path(args.grid))
+    #O = tuple(args.origin)
+    #if args.dest is not None:
+    #    D = tuple(args.dest)
 
     #calcola contesto e complemento di O e stampa a video
     #context, complement = compute_context_and_complement(g, O)
     context, complement = compute_context_and_complement_v2(g, O)
 
     print(f"Origine O = {O}")
-    if args.dest is not None:
+    if D is not None:
         print(f"Destinazione D = {D}")
     print(f"Contesto(O): {len(context)} celle")
     print(f"Complemento(O): {len(complement)} celle")
 
     #se l'utente ha fornito anche --dest allora legge le coordinate di D, calcola la distanza libera e la stampa con 3 cifre decimali
-    if args.dest:
-        D = tuple(args.dest)
+    if D:
         dist = dlib(O, D)
         print(f"Distanza libera dlib(O,D) = {dist:.3f}")
 

@@ -14,9 +14,9 @@ import argparse, csv, math, time, json, statistics
 from pathlib import Path
 from typing import Tuple, List, Dict, Set
 
-from grid_generator import Grid
-from grid_analysis import dlib, compute_context_and_complement
-from grid_pathfinder import cammino_minimo, build_path_from_landmarks, validate_path
+from _1_grid_generator import Grid
+from _2_grid_analysis import dlib, compute_context_and_complement
+from _3_grid_pathfinder import cammino_minimo, build_path_from_landmarks, validate_path
 
 Cell = Tuple[int,int]
 
@@ -82,9 +82,9 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=1, variant:int=0) -> Dict:
     #patch temporaneo: sostituiamo compute_context_and_complement
     #salva la funzione originale in orig_func e la sostituisce con una lambda che chiama la variante con il parametro variant
     #in questo modo quando cammino_minimo chiamer� compute_context_and_complement user� la versione scelta
-    import grid_analysis
-    orig_func = grid_analysis.compute_context_and_complement
-    grid_analysis.compute_context_and_complement = lambda g_,O_: compute_context_and_complement_variant(g_,O_,variant)
+    import _2_grid_analysis
+    orig_func = _2_grid_analysis.compute_context_and_complement
+    _2_grid_analysis.compute_context_and_complement = lambda g_,O_: compute_context_and_complement_variant(g_,O_,variant)
 
     #fa due esperimenti, in entrambi i versi
     #per ogni direzione inizializza le liste per le lunghezze e i tempi e ripete per trials volte
@@ -108,7 +108,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=1, variant:int=0) -> Dict:
         }
 
     #ripristina la funzione originale per non lasciare modifiche permanenti
-    grid_analysis.compute_context_and_complement = orig_func
+    _2_grid_analysis.compute_context_and_complement = orig_func
 
     return results
 
