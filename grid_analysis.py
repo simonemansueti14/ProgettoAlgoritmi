@@ -44,6 +44,8 @@ def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cel
     
     if g.in_bounds(r0, c0) is False:
         raise ValueError(f"Cella origine O={O} fuori dai limiti della griglia {rows}x{cols}")
+    if g.cells[r0][c0]==1:
+        raise ValueError(f"Cella origine O={O} impostata su un ostacolo!")
 
     #scorre tutte le celle della griglia
     #se una cella (r,c) è un ostacolo la salta con continue
@@ -64,7 +66,120 @@ def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cel
 
     return context, complement
 
+def compute_context_and_complement_v2(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
+ 
+    context: Set[Cell] = set()
+    complement: Set[Cell] = set()
 
+    rows, cols = g.h, g.w
+    r0, c0 = O
+
+    if not g.in_bounds(r0, c0):
+        raise ValueError(f"Cella origine O={O} fuori dai limiti della griglia {rows}x{cols}")
+    if not g.is_free(r0, c0):
+        raise ValueError(f"Cella origine O={O} impostata su un ostacolo!")
+
+    # Direzioni: (dr, dc)
+    diagonals = [(-1, 1), (-1, -1), (1, -1), (1, 1)]  # NE, NW, SW, SE
+    horizontals = [(0, 1), (0, -1)]                   # E, W
+    verticals = [(-1, 0), (1, 0)]                     # N, S
+
+    # funzione ausiliaria per verificare se un percorso dritto o obliquo è libero
+    #Ritorna la cella finale se tutti i passi sono liberi, altrimenti None
+    def free_path(r, c, dr, dc, steps) -> Tuple[int, int] | None:
+        for _ in range(steps):
+            r += dr
+            c += dc
+            if not g.in_bounds(r, c) or not g.is_free(r, c):
+                return None
+        return (r, c)
+
+    # Itera su tutte le celle della griglia
+    for r in range(rows):
+        for c in range(cols):
+            if (r, c) == O or not g.is_free(r, c):
+                continue
+
+            found_type1 = False
+            found_type2 = False
+
+            # --- TIPO 1: oblique poi rette ---
+            for ddr, ddc in diagonals:
+                # prova k passi diagonali
+                for k in range(0, max(rows, cols)):
+                    #Se free_path su k passi ritorna None => la diagonale con k passi è bloccata, non proviamo k più grandi in quella direzione (break)
+                    start = free_path(r0, c0, ddr, ddc, k)
+                    if start is None:
+                        break
+                    sr, sc = start
+                    # se la cella raggiunta è già la destinazione => tipo 1 (caso particolare tutto obliquo senza rette)
+                    if (sr, sc) == (r, c):
+                        found_type1 = True
+                        break
+                    # poi prova, partendo da quella cella, le rette ammesse per quel quadrante (orizzontale o verticale allontanandomi dall'origine)
+                    for dr, dc in [(0, ddc), (ddr, 0)]:
+                        for m in range(1, max(rows, cols)):
+                            end = free_path(sr, sc, dr, dc, m)
+                            if end is None:
+                                break
+                            if end == (r, c):
+                                found_type1 = True
+                                break
+                        if found_type1:
+                            break
+                    if found_type1:
+                        break
+                if found_type1:
+                    break
+
+            # includi anche i cammini puri (solo retti o solo diagonali)
+            if not found_type1:
+                # solo orizzontale o verticale
+                for dr, dc in horizontals + verticals:
+                    #uso free_path con un numero di passi pari alla distanza
+                    end = free_path(r0, c0, dr, dc, max(abs(r - r0), abs(c - c0)))
+                    if end == (r, c):
+                        found_type1 = True
+                        break
+                # solo diagonale (se a sua volta già non è stato raggiungibile con oriz/vert)
+                if not found_type1:
+                    for dr, dc in diagonals:
+                        end = free_path(r0, c0, dr, dc, abs(r - r0))
+                        if end == (r, c):
+                            found_type1 = True
+                            break
+
+            # --- TIPO 2: dritte poi oblique ---
+
+            for dr, dc in horizontals + verticals: #cioè in [(0,1), (0,-1), (-1,0), (1,0)]
+                # primo tratto rettilineo
+                for m in range(1, max(rows, cols)):
+                    start = free_path(r0, c0, dr, dc, m)
+                    if start is None:
+                        break
+                    sr, sc = start
+                    # poi prova tutte le diagonali possibili
+                    for ddr, ddc in diagonals:
+                        for k in range(1, max(rows, cols)):
+                            end = free_path(sr, sc, ddr, ddc, k)
+                            if end is None:
+                                break
+                            if end == (r, c):
+                                found_type2 = True
+                                break
+                        if found_type2:
+                            break
+                    if found_type2:
+                        break
+                if found_type2:
+                    break
+
+            if found_type1:
+                context.add((r, c))
+            elif found_type2:
+                complement.add((r, c))
+
+    return context, complement
 
 # ---------------------------------- CARICAMENTO GRIGLIA ----------------------------------
 #carica una grilia salvata in formato csv
@@ -75,8 +190,6 @@ def load_grid_from_csv(path: Path) -> Grid:
     g = Grid(len(cells), len(cells[0]))
     g.cells = cells
     return g
-
-
 
 # ---------------------------------- MAIN ----------------------------------
 #crea un parser di argomenti con 3 comandi
@@ -93,7 +206,8 @@ def main():
         D = tuple(args.dest)
 
     #calcola contesto e complemento di O e stampa a video
-    context, complement = compute_context_and_complement(g, O)
+    #context, complement = compute_context_and_complement(g, O)
+    context, complement = compute_context_and_complement_v2(g, O)
 
     print(f"Origine O = {O}")
     if args.dest is not None:
