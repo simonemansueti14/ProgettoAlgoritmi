@@ -24,7 +24,11 @@ Cell = Tuple[int, int]
 
 # ---------------------------------- DISTANZA LIBERA ----------------------------------
 #calcola la distanza libera tra due celle O origine e D destinazione
-def dlib(o: Cell, d: Cell) -> float:
+def dlib(o: Cell, d: Cell, cont: Set[Cell]=None, comp: Set[Cell]=None) -> float:
+    #parte della dlib che serve per questo esercizio (non so ancora a priori se esiste o no una dist libera)
+    if cont is not None and comp is not None:
+        if d not in cont and d not in comp: raise ValueError("Dist. libera non calcolabile - Destinazione inserita non presente nella chiusura di O")
+    #parte comune
     dx = abs(o[1] - d[1])
     dy = abs(o[0] - d[0])
     dmin = min(dx, dy)
@@ -35,6 +39,7 @@ def dlib(o: Cell, d: Cell) -> float:
 
 # ---------------------------------- CONTESTO E COMPLEMENTO ----------------------------------
 #data una griglia g e una cella origine O, calcola il contesto e il complemento di O
+"""
 def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
     context: Set[Cell] = set()
     complement: Set[Cell] = set()
@@ -65,8 +70,9 @@ def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cel
                 complement.add((r,c))
 
     return context, complement
+"""
 
-def compute_context_and_complement_v2(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
+def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
  
     context: Set[Cell] = set()
     complement: Set[Cell] = set()
@@ -191,6 +197,22 @@ def load_grid_from_csv(path: Path) -> Grid:
     g.cells = cells
     return g
 
+# --- stampa contesto e complemento ---
+def print_cont_comp(cont : Set[Cell], comp: Set[Cell]):
+    res="contesto: {"
+    count=0
+    for cell in cont:
+        count+=1
+        res+=f"({cell[0]},{cell[1]})"
+        if count<len(cont)-1: res+=","
+    print(res+"}")
+    res="complemento: {"
+    count=0
+    for cell in comp:
+        res+=f"({cell[0]},{cell[1]})"
+        if count<len(comp)-1: res+=","
+    print(res+"}")
+
 # ---------------------------------- MAIN ----------------------------------
 def main():
 
@@ -220,8 +242,7 @@ def main():
     #    D = tuple(args.dest)
 
     #calcola contesto e complemento di O e stampa a video
-    #context, complement = compute_context_and_complement(g, O)
-    context, complement = compute_context_and_complement_v2(g, O)
+    context, complement = compute_context_and_complement(g, O)
 
     print(f"Origine O = {O}")
     if D is not None:
@@ -229,9 +250,11 @@ def main():
     print(f"Contesto(O): {len(context)} celle")
     print(f"Complemento(O): {len(complement)} celle")
 
+    print_cont_comp(context,complement)
+
     #se l'utente ha fornito anche --dest allora legge le coordinate di D, calcola la distanza libera e la stampa con 3 cifre decimali
     if D:
-        dist = dlib(O, D)
+        dist = dlib(O, D, context, complement)
         print(f"Distanza libera dlib(O,D) = {dist:.3f}")
 
 if __name__ == "__main__":

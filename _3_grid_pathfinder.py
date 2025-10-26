@@ -18,7 +18,6 @@ from typing import List, Tuple, Set, Dict
 from pathlib import Path
 from _1_grid_generator import Grid
 from _2_grid_analysis import dlib, compute_context_and_complement
-
 Cell = Tuple[int, int]
 
 # ---------------------------------- FRONTIERA ----------------------------------
