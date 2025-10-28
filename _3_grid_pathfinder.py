@@ -137,12 +137,13 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
 #punto per gruppi da 3
 #data una sequenza di landmark ricostruisce tutte le celle intermedie del cammino
 #prima ci si muove in diagonale finché è possibile, poi con mosse orizzontali/verticali
+"""
 def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]]) -> List[Cell]:
-    """
-    Costruisce la sequenza completa delle celle a partire dai landmark.
-    NB: qui semplifichiamo: fra due landmark usiamo mosse step-by-step
-    seguendo prima la diagonale poi l'asse, come da definizione di cammino libero.
-    """
+    
+    #Costruisce la sequenza completa delle celle a partire dai landmark.
+    #NB: qui semplifichiamo: fra due landmark usiamo mosse step-by-step
+    #seguendo prima la diagonale poi l'asse, come da definizione di cammino libero.
+
     path: List[Cell] = [] #lista finale con tutte le celle del cammino
     #scorre la sequenza di landmark a coppie consecutive (A,B)
     for i in range(len(seq)-1):
@@ -156,16 +157,164 @@ def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]]) -> List[Cell]
         #ogni cella attraversata viene aggiunta al cammino
         while r!=rB and c!=cB:
             r+=dr; c+=dc
+            if not g.is_free(r,c): break
             path.append((r,c))
         #quando non può più muovere in diagonale completa il percorso, se resta la differenza sulle righe fa mosse verticali
         #se resta differenza sulle colonne fa mosse orizzontali
         while r!=rB:
             r+=dr
+            if not g.is_free(r,c): break
             path.append((r,c))
         while c!=cB:
             c+=dc
+            if not g.is_free(r,c): break
             path.append((r,c))
     return path
+"""
+def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]], blocked: Set[Cell]=None) -> List[Cell]:
+    """
+    Ricostruisce la sequenza completa delle celle a partire dai landmark.
+    Per ogni coppia consecutiva (A, typeA) -> (B, typeB) ricava un segmento VALID0
+    che sia un cammino libero del tipo corrispondente a B:
+      - se typeB == 1 -> cerca un segmento di TIPO1 (diagonali (>=0) poi rette (>=0))
+      - se typeB == 2 -> cerca un segmento di TIPO2 (rette (>=1) poi diagonali (>=1))
+      - se typeB == 0 -> assume TIPO1 (origine)
+    blocked: insieme di celle da trattare come ostacoli (opzionale)
+    Ritorna la lista delle celle del path (escluse le ripetizioni tra segmenti).
+    Se non è possibile ricostruire, ritorna una lista vuota.
+    """
+    if blocked is None:
+        blocked = set()
+
+    def free_path(r, c, dr, dc, steps):
+        """Se tutti i passi sono liberi e dentro griglia ritorna la cella finale, altrimenti None."""
+        for _ in range(steps):
+            r += dr; c += dc
+            if not g.in_bounds(r, c) or not g.is_free(r, c) or (r,c) in blocked:
+                return None
+        return (r, c)
+
+    diagonals = [(-1, 1), (-1, -1), (1, -1), (1, 1)]
+    horizontals = [(0, 1), (0, -1)]
+    verticals = [(-1, 0), (1, 0)]
+
+    def find_type1_segment(A, B):
+        """Cerca un segmento di tipo1 da A a B. Ritorna lista di celle (escluse A, include B) o None."""
+        r0, c0 = A
+        r, c = B
+        maxs = max(g.h, g.w)
+
+        # provare oblique k>=0 poi rette m>=0
+        for ddr, ddc in diagonals:
+            # opzionale: ottimizzazione evita diagonali contrarie, ma non necessaria
+            # proviamo k da 0 in su
+            for k in range(0, maxs):
+                start = free_path(r0, c0, ddr, ddc, k)
+                if start is None:
+                    break
+                sr, sc = start
+                if (sr, sc) == (r, c):
+                    # segmento puramente diagonale (k passi)
+                    # ricostruisco le celle percorse (escluse A)
+                    seg = []
+                    tr, tc = r0, c0
+                    for _ in range(k):
+                        tr += ddr; tc += ddc
+                        seg.append((tr, tc))
+                    return seg
+                # poi rette ammesse: (0, ddc) e (ddr, 0) come nella definizione
+                for dr, dc in [(0, ddc), (ddr, 0)]:
+                    for m in range(1, maxs):
+                        end = free_path(sr, sc, dr, dc, m)
+                        if end is None:
+                            break
+                        if end == (r, c):
+                            # ricostruisco le celle percorse: k diagonali poi m rette
+                            seg = []
+                            tr, tc = r0, c0
+                            for _ in range(k):
+                                tr += ddr; tc += ddc
+                                seg.append((tr, tc))
+                            for _ in range(m):
+                                tr += dr; tc += dc
+                                seg.append((tr, tc))
+                            return seg
+        # prova cammini puri rettilinei (k=0,m>=1) o puri diagonali già coperti
+        for dr, dc in horizontals + verticals:
+            dist = abs(r - r0) if dr != 0 else abs(c - c0)
+            if dist == 0:
+                continue
+            end = free_path(r0, c0, dr, dc, dist)
+            if end == (r, c):
+                seg = []
+                tr, tc = r0, c0
+                for _ in range(dist):
+                    tr += dr; tc += dc
+                    seg.append((tr, tc))
+                return seg
+        return None
+
+    def find_type2_segment(A, B):
+        """Cerca un segmento di tipo2: rette (>=1) poi diagonali (>=1). Ritorna lista di celle (escluse A, include B) o None."""
+        r0, c0 = A
+        r, c = B
+        maxs = max(g.h, g.w)
+
+        for dr0, dc0 in horizontals + verticals:
+            # primi m passi rettilinei, m>=1
+            for m in range(1, maxs):
+                start = free_path(r0, c0, dr0, dc0, m)
+                if start is None:
+                    break
+                sr, sc = start
+                # poi diagonali k>=1
+                for ddr, ddc in diagonals:
+                    for k in range(1, maxs):
+                        end = free_path(sr, sc, ddr, ddc, k)
+                        if end is None:
+                            break
+                        if end == (r, c):
+                            # ricostruisco: m rettilinei poi k diagonali
+                            seg = []
+                            tr, tc = r0, c0
+                            for _ in range(m):
+                                tr += dr0; tc += dc0
+                                seg.append((tr, tc))
+                            for _ in range(k):
+                                tr += ddr; tc += ddc
+                                seg.append((tr, tc))
+                            return seg
+        return None
+
+    # costruzione path iterando sui landmark
+    full_path: List[Cell] = []
+    if not seq:
+        return full_path
+
+    # inizio: includo l'origine
+    full_path.append(seq[0][0])
+
+    for i in range(len(seq)-1):
+        A, typeA = seq[i]
+        B, typeB = seq[i+1]
+        # scegli il tipo da usare basandoti sul tipo del landmark B (come nel codice CAMMINOMIN)
+        typ = 1 if typeB == 1 or typeB == 0 else 2
+
+        if typ == 1:
+            seg = find_type1_segment(A, B)
+        else:
+            seg = find_type2_segment(A, B)
+
+        if seg is None:
+            print(f"[ERRORE] Impossibile ricostruire segmento {A} -> {B} di tipo {typ}")
+            return []  # fallimento: sequence inconsistente con le chiusure scelte
+
+        # append segment cells ma evitando ripetizione della prima cella (A)
+        for cell in seg:
+            if cell != full_path[-1]:
+                full_path.append(cell)
+
+    return full_path
 
 
 
@@ -227,6 +376,7 @@ def main():
     # gruppo da 3: costruzione cammino completo
     #ricostruisce la sequenza completa di celle, poi verifica se il percorso passa davvero solo da 
     #celle libere, se tutto va bene stampa il cammino completo 
+
     full_path = build_path_from_landmarks(g, seq)
     if validate_path(g, full_path):
         print(f"Cammino completo ({len(full_path)} celle): {full_path}")
