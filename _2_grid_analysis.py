@@ -39,39 +39,6 @@ def dlib(o: Cell, d: Cell, cont: Set[Cell]=None, comp: Set[Cell]=None) -> float:
 
 # ---------------------------------- CONTESTO E COMPLEMENTO ----------------------------------
 #data una griglia g e una cella origine O, calcola il contesto e il complemento di O
-"""
-def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
-    context: Set[Cell] = set()
-    complement: Set[Cell] = set()
-
-    rows, cols = g.h, g.w
-    r0, c0 = O
-    
-    if g.in_bounds(r0, c0) is False:
-        raise ValueError(f"Cella origine O={O} fuori dai limiti della griglia {rows}x{cols}")
-    if g.cells[r0][c0]==1:
-        raise ValueError(f"Cella origine O={O} impostata su un ostacolo!")
-
-    #scorre tutte le celle della griglia
-    #se una cella (r,c) è un ostacolo la salta con continue
-    for r in range(rows):
-        for c in range(cols):
-            if not g.is_free(r, c):
-                continue
-            dx, dy = abs(c - c0), abs(r - r0)
-
-            if dx == 0 and dy == 0:
-                continue
-
-            d1 = math.sqrt(2)*min(dx,dy) + abs(dx-dy)
-            if dx >= dy:
-                context.add((r,c))
-            else:
-                complement.add((r,c))
-
-    return context, complement
-"""
-
 def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
  
     context: Set[Cell] = set()
@@ -229,17 +196,6 @@ def main():
         D = (r1, c1)
     else:
         D = None
-
-    #ap = argparse.ArgumentParser(description="Compito 2: Analisi griglie (contesto, complemento, distanza libera)")
-    #ap.add_argument("--grid", required=True, help="file CSV della griglia (generato dal Compito 1)")
-    #ap.add_argument("--origin", type=int, nargs=2, metavar=("R","C"), required=True, help="cella origine O (riga colonna)")
-    #ap.add_argument("--dest", type=int, nargs=2, metavar=("R","C"), default=None, help="cella destinazione D (opzionale)")
-    #args = ap.parse_args()
-
-    #g = load_grid_from_csv(Path(args.grid))
-    #O = tuple(args.origin)
-    #if args.dest is not None:
-    #    D = tuple(args.dest)
 
     #calcola contesto e complemento di O e stampa a video
     context, complement = compute_context_and_complement(g, O)

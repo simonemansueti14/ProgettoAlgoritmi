@@ -352,11 +352,13 @@ def main():
     ap.add_argument("--origin", type=int, nargs=2, metavar=("R","C"), required=True, help="cella origine O (riga colonna)")
     ap.add_argument("--dest", type=int, nargs=2, metavar=("R","C"), required=True, help="cella destinazione D (riga colonna)")
     ap.add_argument("--timeout", type=float, default=None, help="tempo massimo (in secondi) per il calcolo (opzionale)")  # nuovo parametro
+    ap.add_argument("--save", action="store_true", help="Vuoi salvare l'output su file JSON?")
     args = ap.parse_args()
 
     g = load_grid_from_csv(Path(args.grid))
     O = tuple(args.origin) #converte le coordinate in tuple
     D = tuple(args.dest)
+    save = args.save
 
     deadline = time.perf_counter() + args.timeout if args.timeout else None
 
@@ -392,22 +394,24 @@ def main():
     print(f"Calcolo completato: {completed}")
 
     #salvataggio opzionale
-    out_json = {
-        "origin": O, "dest": D,
-        "length": length,
-        "landmarks": seq,
-        "path": full_path,
-        "completed": completed,
-        "summary": {
-            "grid_size": (g.h, g.w),
-            "frontier_count": stats["frontier_count"],
-            "tipo1_count": stats["tipo1_count"],
-            "tipo2_count": stats["tipo2_count"]
+    print(f"Parametro per salvare cammino su file: {save}")
+    if save:
+        out_json = {
+            "origin": O, "dest": D,
+            "length": length,
+            "landmarks": seq,
+            "path": full_path,
+            "completed": completed,
+            "summary": {
+                "grid_size": (g.h, g.w),
+                "frontier_count": stats["frontier_count"],
+                "tipo1_count": stats["tipo1_count"],
+                "tipo2_count": stats["tipo2_count"]
+            }
         }
-    }
-    with open("cammino_output.json","w",encoding="utf-8") as f:
-        json.dump(out_json,f,indent=2)
-    print("\nRisultato salvato in cammino_output.json")
+        with open("cammino_output.json","w",encoding="utf-8") as f:
+            json.dump(out_json,f,indent=2)
+        print("\nRisultato salvato in cammino_output.json")
 
 if __name__ == "__main__":
     main()
