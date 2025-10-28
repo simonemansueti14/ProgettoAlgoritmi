@@ -24,7 +24,7 @@ Cell = Tuple[int, int]
 #metodo per determinare la frontiera di una cella di origine O
 #g: Grid è la griglia, context sono le celle del contesto di O, complement del complemento, e ritorna
 #una lista di coppie ((r,c), tipo) dove tipo vale 1 se la cella era nel contesto e 2 se era nel complemento
-def compute_frontier(g: Grid, context: Set[Cell], complement: Set[Cell]) -> List[Tuple[Cell,int]]:
+def compute_frontier(g: Grid, context: Set[Cell], complement: Set[Cell], O: Cell) -> List[Tuple[Cell,int]]:
     """
     Determina la frontiera di O (celle al confine con l'esterno).
     Restituisce una lista di coppie (F, tipo) dove tipo=1 se appartiene al contesto, 2 se al complemento.
@@ -32,12 +32,14 @@ def compute_frontier(g: Grid, context: Set[Cell], complement: Set[Cell]) -> List
     frontier: List[Tuple[Cell,int]] = [] #lista vuota che verrà riempita con le celle di frontiera trovate
     closure = context.union(complement) #unione di contesto e complemento
 
+    print(f"Chiusura {closure}")
+
     #per ogni cella (r,c) della chiusura, guarda tutti i suoi 8 vicini
     for (r,c) in closure:
         for dr, dc in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]: #spostamento su giù ecc
             nr, nc = r+dr, c+dc #coordinate della cella vicina
-            #se la cella vicina è dentro i confini della grilia, se è libera, ma non fa parte della chiusura
-            if g.in_bounds(nr,nc) and g.is_free(nr,nc) and (nr,nc) not in closure: 
+            #se la cella vicina è dentro i confini della grilia, se è libera, ma non fa parte della chiusura e non è il punto di origine
+            if g.in_bounds(nr,nc) and g.is_free(nr,nc) and (nr,nc) not in closure and (nr,nc) != O:
                 if (r,c) in context: #in quel caso è sul bordo quindi appartiene alla frontiera, e andrò a vedere se è tipo 1 o 2
                     frontier.append(((r,c),1)) 
                 else:
@@ -94,8 +96,10 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
         return dlib(O,D), [(O,0),(D,t)], stats, True
 
     # altrimenti calcolo la frontiera della chiusura
-    frontier = compute_frontier(g, context, complement)
+    frontier = compute_frontier(g, context, complement, O)
+    print(f"Frontiera trovata da {O}: {[f for f,_ in frontier]}")
     stats["frontier_count"] += len(frontier)  # aggiorno il contatore con le celle di frontiera trovate
+    
 
     lunghezzaMin = math.inf  # inizializza la migliore lunghezza a infinito
     seqMin: List[Tuple[Cell,int]] = []  # inizializza la miglior sequenza vuota
@@ -137,44 +141,10 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
 #punto per gruppi da 3
 #data una sequenza di landmark ricostruisce tutte le celle intermedie del cammino
 #prima ci si muove in diagonale finché è possibile, poi con mosse orizzontali/verticali
-"""
-def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]]) -> List[Cell]:
-    
-    #Costruisce la sequenza completa delle celle a partire dai landmark.
-    #NB: qui semplifichiamo: fra due landmark usiamo mosse step-by-step
-    #seguendo prima la diagonale poi l'asse, come da definizione di cammino libero.
-
-    path: List[Cell] = [] #lista finale con tutte le celle del cammino
-    #scorre la sequenza di landmark a coppie consecutive (A,B)
-    for i in range(len(seq)-1):
-        A,_ = seq[i] #landmark di partenza
-        B,_ = seq[i+1] #landmark di arrivo
-        r,c = A #estrae coordinate riga colonna di A
-        rB,cB = B #estrae coordinate riga colonna di B
-        dr = 1 if rB>r else -1 if rB<r else 0 #calcolo direzione in cui bisogna muoversi, dr verso rb
-        dc = 1 if cB>c else -1 if cB<c else 0 #dc verso cb
-        #finché entrambe le coordinate differiscono muove in diagonale, incrementa r e c insieme
-        #ogni cella attraversata viene aggiunta al cammino
-        while r!=rB and c!=cB:
-            r+=dr; c+=dc
-            if not g.is_free(r,c): break
-            path.append((r,c))
-        #quando non può più muovere in diagonale completa il percorso, se resta la differenza sulle righe fa mosse verticali
-        #se resta differenza sulle colonne fa mosse orizzontali
-        while r!=rB:
-            r+=dr
-            if not g.is_free(r,c): break
-            path.append((r,c))
-        while c!=cB:
-            c+=dc
-            if not g.is_free(r,c): break
-            path.append((r,c))
-    return path
-"""
 def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]], blocked: Set[Cell]=None) -> List[Cell]:
     """
     Ricostruisce la sequenza completa delle celle a partire dai landmark.
-    Per ogni coppia consecutiva (A, typeA) -> (B, typeB) ricava un segmento VALID0
+    Per ogni coppia consecutiva (A, typeA) -> (B, typeB) ricava un segmento VALIDO
     che sia un cammino libero del tipo corrispondente a B:
       - se typeB == 1 -> cerca un segmento di TIPO1 (diagonali (>=0) poi rette (>=0))
       - se typeB == 2 -> cerca un segmento di TIPO2 (rette (>=1) poi diagonali (>=1))
