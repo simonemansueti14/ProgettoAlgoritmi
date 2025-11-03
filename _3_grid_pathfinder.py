@@ -32,7 +32,8 @@ def compute_frontier(g: Grid, context: Set[Cell], complement: Set[Cell], O: Cell
     frontier: List[Tuple[Cell,int]] = [] #lista vuota che verrà riempita con le celle di frontiera trovate
     closure = context.union(complement) #unione di contesto e complemento
 
-    print(f"Chiusura {closure}")
+    #debug
+    #print(f"Chiusura {closure}")
 
     #per ogni cella (r,c) della chiusura, guarda tutti i suoi 8 vicini
     for (r,c) in closure:
@@ -78,6 +79,8 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
     # se O o D non sono libere, cammino impossibile → ritorna infinito, sequenza vuota e stats invariato
     if not g.is_free(*O) or not g.is_free(*D):
         return math.inf, [], stats, True
+    
+    if O==D: return 0,[],stats,True
 
     # calcolo contesto e complemento di O, ignorando le celle già bloccate
     context, complement = compute_context_and_complement(g, O)
@@ -97,7 +100,8 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
 
     # altrimenti calcolo la frontiera della chiusura
     frontier = compute_frontier(g, context, complement, O)
-    print(f"Frontiera trovata da {O}: {[f for f,_ in frontier]}")
+    #debug
+    #print(f"Frontiera trovata da {O}: {[f for f,_ in frontier]}")
     stats["frontier_count"] += len(frontier)  # aggiorno il contatore con le celle di frontiera trovate
     
 
@@ -289,18 +293,16 @@ def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]], blocked: Set[
 
 
 # ---------------------------------- VALIDAZIONE CAMMINO ----------------------------------
-#verifica se la sequeza di celle path calcolata dal cammino passa solo per celle libere (.) e non da ostacoli (#)
-def validate_path(g: Grid, path: List[Cell]) -> bool:
+
+def validate_path(g: Grid, path: List[Cell]=None) -> bool:
     """
-    Controlla che tutte le celle del cammino siano libere.
-    Ritorna True se il cammino è valido, False se passa sopra a un ostacolo.
+    Controlla che non ci siano ostacoli in mezzo al percorso
     """
-    #per ogni cella del cammino controlla che sia dentro i confini della griglia e che sia libera
     for (r, c) in path:
         if not g.in_bounds(r, c) or not g.is_free(r, c): #se fallisce stampa messaggio e ritorna false
             print(f"[ERRORE] Cammino invalido: cella {(r,c)} non è libera")
-            return False
-    return True
+            return True
+    return False
 
 
 # ---------------------------------- CARICAMENTO GRIGLIA ----------------------------------
@@ -316,33 +318,38 @@ def load_grid_from_csv(path: Path) -> Grid:
 
 # ---------------------------------- MAIN ----------------------------------
 def main():
-    #lettura parametri da terminale
-    ap = argparse.ArgumentParser(description="Compito 3: Cammino minimo con CAMMINOMIN")
-    ap.add_argument("--grid", required=True, help="file CSV della griglia (generato dal Compito 1)")
-    ap.add_argument("--origin", type=int, nargs=2, metavar=("R","C"), required=True, help="cella origine O (riga colonna)")
-    ap.add_argument("--dest", type=int, nargs=2, metavar=("R","C"), required=True, help="cella destinazione D (riga colonna)")
-    ap.add_argument("--timeout", type=float, default=None, help="tempo massimo (in secondi) per il calcolo (opzionale)")  # nuovo parametro
-    ap.add_argument("--save", action="store_true", help="Vuoi salvare l'output su file JSON?")
-    args = ap.parse_args()
+    grid = input("Inserisci il percorso del file CSV della griglia: ").strip()
+    r0 = int(input("Inserisci riga origine O: "))
+    c0 = int(input("Inserisci colonna origine O: "))
+    r1 = int(input("Inserisci riga destinazione D: "))
+    c1 = int(input("Inserisci colonna destinazione D: "))
+    checkTimeOut=input("Inserisci timeout (s) per il calcolo (opzionale): ")
+    timeout=None
+    if checkTimeOut!='':
+        timeout=float(checkTimeOut)
 
-    g = load_grid_from_csv(Path(args.grid))
-    O = tuple(args.origin) #converte le coordinate in tuple
-    D = tuple(args.dest)
-    save = args.save
+    save=input("salvataggio Json? (s/n): ").strip().lower()
 
-    deadline = time.perf_counter() + args.timeout if args.timeout else None
+    g = load_grid_from_csv(Path(grid))
+    O = (r0,c0)
+    D =(r1,c1)
+
+    if timeout==None: 
+        deadline = None
+    else:
+        deadline = time.perf_counter() + timeout
 
     #chiama funzione ricorsiva con deadline
     length, seq, stats, completed = cammino_minimo(g, O, D, deadline=deadline)
     if not completed:
-        print("Calcolo interrotto (timeout raggiunto) – risultato parziale:")
+        print("Calcolo interrotto (timeout raggiunto) risultato parziale:")
     elif length == math.inf:
         print("Nessun cammino minimo trovato (celle non raggiungibili)")
-        return
+        #return
 
 
 
-    print(f"Cammino minimo O={O} -> D={D}")
+    print(f"Calcolo del cammino minimo da O={O} a D={D}")
     print(f"Sequenza landmark = {seq}")
 
     # gruppo da 3: costruzione cammino completo
@@ -350,10 +357,12 @@ def main():
     #celle libere, se tutto va bene stampa il cammino completo 
 
     full_path = build_path_from_landmarks(g, seq)
-    if validate_path(g, full_path):
-        print(f"Cammino completo ({len(full_path)} celle): {full_path}")
-    else:
-        print("Cammino non valido (passa sopra a ostacoli)")
+    
+    print(f"Cammino completo ({len(full_path)} celle): {full_path}")
+    print(f"distanza minima: {length}")
+
+    
+    if validate_path(g,full_path): print("Errore! Il percorso intermedio passa sopra ad ostacoli!")
 
     #riepilogo statistico
     print("\n-- Riepilogo istanza --")
@@ -364,8 +373,8 @@ def main():
     print(f"Calcolo completato: {completed}")
 
     #salvataggio opzionale
-    print(f"Parametro per salvare cammino su file: {save}")
-    if save:
+    #print(f"Parametro per salvare cammino su file: {save}")
+    if save=="s":
         out_json = {
             "origin": O, "dest": D,
             "length": length,
