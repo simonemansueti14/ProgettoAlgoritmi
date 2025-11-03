@@ -122,17 +122,45 @@ def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cel
                             found_type1 = True
                             break
 
-            # --- TIPO 2: dritte poi oblique ---
-
-            for dr, dc in horizontals + verticals: #cioè in [(0,1), (0,-1), (-1,0), (1,0)]
-                # primo tratto rettilineo
+            # --- TIPO 2: dritte poi oblique (coerenti col quadrante) ---
+            for dr, dc in horizontals + verticals:
                 for m in range(1, max(rows, cols)):
                     start = free_path(r0, c0, dr, dc, m)
                     if start is None:
                         break
                     sr, sc = start
-                    # poi prova tutte le diagonali possibili
-                    for ddr, ddc in diagonals:
+
+                    # determina il quadrante di (sr,sc) rispetto all'origine (r0,c0)
+                    possible_diagonals = []
+
+                    if sr < r0 and sc > c0:           # Quadrante I
+                        possible_diagonals = [(-1, 1)]    # NE
+                    elif sr < r0 and sc < c0:         # Quadrante II
+                        possible_diagonals = [(-1, -1)]   # NW
+                    elif sr > r0 and sc < c0:         # Quadrante III
+                        possible_diagonals = [(1, -1)]    # SW
+                    elif sr > r0 and sc > c0:         # Quadrante IV
+                        possible_diagonals = [(1, 1)]     # SE
+                    else:
+                        # Caso bordo: stessa riga o stessa colonna
+                        if sr == r0:
+                            # stessa riga: determinato dalla direzione orizzontale
+                            if sc > c0:
+                                possible_diagonals = [(-1, 1), (1, 1)]   # NE, SE
+                            elif sc < c0:
+                                possible_diagonals = [(-1, -1), (1, -1)] # NW, SW
+                        elif sc == c0:
+                            # stessa colonna: determinato dalla direzione verticale
+                            if sr < r0:
+                                possible_diagonals = [(-1, 1), (-1, -1)] # NE, NW
+                            elif sr > r0:
+                                possible_diagonals = [(1, 1), (1, -1)]   # SE, SW
+
+                    # ora prova solo le diagonali consentite
+                    for ddr, ddc in possible_diagonals:
+                        # pruning: la diagonale deve effettivamente puntare verso la destinazione
+                        if (r - sr) * ddr < 0 or (c - sc) * ddc < 0:
+                            continue
                         for k in range(1, max(rows, cols)):
                             end = free_path(sr, sc, ddr, ddc, k)
                             if end is None:

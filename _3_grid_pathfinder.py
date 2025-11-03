@@ -48,7 +48,26 @@ def compute_frontier(g: Grid, context: Set[Cell], complement: Set[Cell], O: Cell
                 break
     return frontier
 
-
+#helper
+def path_cost_by_steps(path: List[Cell]) -> float:
+    """Calcola il costo (usando costi 1 per ortogonale, sqrt(2) per diagonale)
+       path è lista di celle in ordine (include origine e destinazione)."""
+    if not path or len(path) == 1:
+        return 0.0
+    total = 0.0
+    for i in range(len(path)-1):
+        r1,c1 = path[i]
+        r2,c2 = path[i+1]
+        dr = abs(r2-r1)
+        dc = abs(c2-c1)
+        if dr == 1 and dc == 1:
+            total += math.sqrt(2)
+        elif (dr == 1 and dc == 0) or (dr == 0 and dc == 1):
+            total += 1.0
+        else:
+            # passo non consentito come cella non adiacente: fallback ad infinito
+            return math.inf
+    return total
 
 # ---------------------------------- CAMMINOMIN ricorsivo ----------------------------------
 def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Dict[str,int]=None, deadline: float=None, best: Tuple[float,List[Tuple[Cell,int]]]=None) -> Tuple[float,List[Tuple[Cell,int]],Dict[str,int],bool]:
@@ -79,7 +98,7 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
     # se O o D non sono libere, cammino impossibile → ritorna infinito, sequenza vuota e stats invariato
     if not g.is_free(*O) or not g.is_free(*D):
         return math.inf, [], stats, True
-    
+    #se O==D
     if O==D: return 0,[],stats,True
 
     # calcolo contesto e complemento di O, ignorando le celle già bloccate
@@ -87,6 +106,9 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
     context = {c for c in context if c not in blocked}
     complement = {c for c in complement if c not in blocked}
     closure = context.union(complement)  # chiusura = insieme di tutte le celle raggiungibili da O
+
+    print(f"contesto di {O}: {context}")
+    print(f"complemento di {O}: {complement}")
 
     # caso base: se la destinazione D è già nella chiusura di O
     if D in closure:
