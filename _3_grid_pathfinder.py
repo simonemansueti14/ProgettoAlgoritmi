@@ -107,8 +107,9 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
     complement = {c for c in complement if c not in blocked}
     closure = context.union(complement)  # chiusura = insieme di tutte le celle raggiungibili da O
 
-    print(f"contesto di {O}: {context}")
-    print(f"complemento di {O}: {complement}")
+    #debug
+    #print(f"contesto di {O}: {context}")
+    #print(f"complemento di {O}: {complement}")
 
     # caso base: se la destinazione D è già nella chiusura di O
     if D in closure:

@@ -1,0 +1,35 @@
+con param secondari:
+
+python _1_grid_generator.py ^
+--width 15 ^
+--height 15 ^
+--simple 0 ^
+--agglomerates 3 ^
+--agg-min 2 ^
+--agg-max 4 ^
+--diagonals 0 ^
+--diag-min 0 ^
+--diag-max 0 ^
+--frames 0 ^
+--frame-minw 0 ^
+--frame-minh 0 ^
+--frame-maxw 0 ^
+--frame-maxh 0 ^
+--frame-thick 0 ^
+--bars 0 ^
+--bar-min 0 ^
+--bar-max 0 ^
+--bar-thick 0 ^
+--out-dir experimental_grids/15x15
+
+senza param secondari:
+
+python _1_grid_generator.py ^
+--width 15 ^
+--height 15 ^
+--simple 0 ^
+--agglomerates 3 ^
+--diagonals 0 ^
+--frames 0 ^
+--bars 0 ^
+--out-dir experimental_grids/15x15

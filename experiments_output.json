@@ -1,60 +1,178 @@
 {
-  "out\\grid_5x5_seed23.csv": {
-    "OtoD": {
-      "avg_length": 5.656854249492381,
-      "avg_time": 0.0069420666647298885,
-      "last_seq": [
-        [
-          [
-            0,
-            0
-          ],
-          0
-        ],
-        [
-          [
-            2,
-            2
-          ],
-          1
-        ],
-        [
-          [
-            4,
-            0
-          ],
-          1
-        ]
-      ],
-      "valid": true
-    },
-    "DtoO": {
-      "avg_length": 5.656854249492381,
-      "avg_time": 0.006001500000517505,
-      "last_seq": [
-        [
-          [
-            4,
-            0
-          ],
-          0
-        ],
-        [
-          [
-            2,
-            2
-          ],
-          1
-        ],
-        [
-          [
-            0,
-            0
-          ],
-          1
-        ]
-      ],
-      "valid": true
+  "variant_0": {
+    "7x7": {
+      "agglomerati.csv": {
+        "OtoD": {
+          "avg_length": 6.242640687119286,
+          "avg_time": 0.010790679999627174,
+          "valid": true,
+          "variant": 0
+        },
+        "DtoO": {
+          "avg_length": 6.242640687119286,
+          "avg_time": 0.027501259988639504,
+          "valid": true,
+          "variant": 0
+        }
+      },
+      "barre.csv": {
+        "OtoD": {
+          "avg_length": 15.071067811865476,
+          "avg_time": 0.12982836000155656,
+          "valid": true,
+          "variant": 0
+        },
+        "DtoO": {
+          "avg_length": 15.071067811865476,
+          "avg_time": 0.09013593999552541,
+          "valid": true,
+          "variant": 0
+        }
+      },
+      "delimitazione_aree_chiuse.csv": {
+        "OtoD": {
+          "avg_length": "inf",
+          "avg_time": 0.03361826000036672,
+          "valid": false,
+          "variant": 0
+        },
+        "DtoO": {
+          "avg_length": "inf",
+          "avg_time": 0.0023491799947805703,
+          "valid": false,
+          "variant": 0
+        }
+      },
+      "diagonali.csv": {
+        "OtoD": {
+          "avg_length": 7.242640687119286,
+          "avg_time": 0.004844639997463674,
+          "valid": true,
+          "variant": 0
+        },
+        "DtoO": {
+          "avg_length": 7.242640687119286,
+          "avg_time": 0.003761499997926876,
+          "valid": true,
+          "variant": 0
+        }
+      },
+      "ostacoli_semplici.csv": {
+        "OtoD": {
+          "avg_length": 6.656854249492381,
+          "avg_time": 0.004413260001456365,
+          "valid": true,
+          "variant": 0
+        },
+        "DtoO": {
+          "avg_length": 6.656854249492381,
+          "avg_time": 0.004668439994566143,
+          "valid": true,
+          "variant": 0
+        }
+      },
+      "partizionamento_spazio.csv": {
+        "OtoD": {
+          "avg_length": "inf",
+          "avg_time": 0.007127619994571432,
+          "valid": false,
+          "variant": 0
+        },
+        "DtoO": {
+          "avg_length": "inf",
+          "avg_time": 0.0034537400060798973,
+          "valid": false,
+          "variant": 0
+        }
+      }
+    }
+  },
+  "variant_1": {
+    "7x7": {
+      "agglomerati.csv": {
+        "OtoD": {
+          "avg_length": 6.242640687119286,
+          "avg_time": 0.014814120007213206,
+          "valid": true,
+          "variant": 1
+        },
+        "DtoO": {
+          "avg_length": 6.242640687119286,
+          "avg_time": 0.02981955999857746,
+          "valid": true,
+          "variant": 1
+        }
+      },
+      "barre.csv": {
+        "OtoD": {
+          "avg_length": 17.071067811865476,
+          "avg_time": 0.13113669999875127,
+          "valid": true,
+          "variant": 1
+        },
+        "DtoO": {
+          "avg_length": 15.071067811865476,
+          "avg_time": 0.08810544000007212,
+          "valid": true,
+          "variant": 1
+        }
+      },
+      "delimitazione_aree_chiuse.csv": {
+        "OtoD": {
+          "avg_length": "inf",
+          "avg_time": 0.03346961999777705,
+          "valid": false,
+          "variant": 1
+        },
+        "DtoO": {
+          "avg_length": "inf",
+          "avg_time": 0.002269560005515814,
+          "valid": false,
+          "variant": 1
+        }
+      },
+      "diagonali.csv": {
+        "OtoD": {
+          "avg_length": 7.242640687119286,
+          "avg_time": 0.005003319989191369,
+          "valid": true,
+          "variant": 1
+        },
+        "DtoO": {
+          "avg_length": 7.242640687119286,
+          "avg_time": 0.003479160001734272,
+          "valid": true,
+          "variant": 1
+        }
+      },
+      "ostacoli_semplici.csv": {
+        "OtoD": {
+          "avg_length": 6.656854249492381,
+          "avg_time": 0.004100319993449375,
+          "valid": true,
+          "variant": 1
+        },
+        "DtoO": {
+          "avg_length": 6.656854249492381,
+          "avg_time": 0.004482420004205778,
+          "valid": true,
+          "variant": 1
+        }
+      },
+      "partizionamento_spazio.csv": {
+        "OtoD": {
+          "avg_length": "inf",
+          "avg_time": 0.006483680009841919,
+          "valid": false,
+          "variant": 1
+        },
+        "DtoO": {
+          "avg_length": "inf",
+          "avg_time": 0.003084139997372404,
+          "valid": false,
+          "variant": 1
+        }
+      }
     }
   }
 }
