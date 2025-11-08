@@ -126,7 +126,6 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
     #debug
     #print(f"Frontiera trovata da {O}: {[f for f,_ in frontier]}")
     stats["frontier_count"] += len(frontier)  # aggiorno il contatore con le celle di frontiera trovate
-    
 
     lunghezzaMin = math.inf  # inizializza la migliore lunghezza a infinito
     seqMin: List[Tuple[Cell,int]] = []  # inizializza la miglior sequenza vuota

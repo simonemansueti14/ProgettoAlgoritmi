@@ -1,13 +1,14 @@
 {
   "config": {
-    "width": 15,
-    "height": 15,
+    "name": "diagonali",
+    "width": 100,
+    "height": 100,
     "seed": null,
     "simple": 0,
-    "agglomerates": 3,
+    "agglomerates": 0,
     "agg_min": 3,
     "agg_max": 7,
-    "diagonals": 0,
+    "diagonals": 20,
     "diag_min": 3,
     "diag_max": 10,
     "frames": 0,
@@ -20,18 +21,18 @@
     "bar_min": 4,
     "bar_max": 12,
     "bar_thick": 1,
-    "out_dir": "experimental_grids/15x15"
+    "out_dir": "experimental_grids/100x100"
   },
   "placed": {
-    "agglomerates": {
-      "clusters": 3,
-      "cells": 15
+    "diagonals": {
+      "chains": 20,
+      "cells": 129
     }
   },
   "grid": {
-    "height": 15,
-    "width": 15,
-    "occupied_cells": 15,
-    "density": 0.0667
+    "height": 100,
+    "width": 100,
+    "occupied_cells": 129,
+    "density": 0.0129
   }
 }

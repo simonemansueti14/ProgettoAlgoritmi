@@ -47,6 +47,7 @@ NEIGH8: List[Cell] = [(-1,-1),(-1,0),(-1,1),(0,-1),(0,1),(1,-1),(1,0),(1,1)]
 
 @dataclass
 class GridConfig:
+    name: str
     width: int
     height: int
     seed: int | None = None
@@ -362,6 +363,10 @@ def generate(config: GridConfig) -> Tuple[Grid, Dict]:
 
 def build_argparser() -> argparse.ArgumentParser: 
     p = argparse.ArgumentParser(description="Generatore di griglie con ostacoli (Compito 1)")
+
+    #aggiunto NAME in funzione dell'es. 4 (mi serve per determinare i vari tipi di griglia cioè di ostacoli)
+    p.add_argument("--name", type=str, required=False, default=None, help="nome della griglia")
+
     p.add_argument("--width", "-W", type=int, required=True, help="larghezza griglia (colonne)")
     p.add_argument("--height", "-H", type=int, required=True, help="altezza griglia (righe)")
     p.add_argument("--seed", "-S", type=int, default=None, help="seed RNG (opzionale)")
@@ -396,6 +401,7 @@ def main():
     ap = build_argparser()
     args = ap.parse_args()
     cfg = GridConfig(
+        name=args.name,
         width=args.width,
         height=args.height,
         seed=args.seed,
@@ -426,7 +432,12 @@ def main():
     print(json.dumps(summary, indent=2))
 
     if cfg.out_dir:
-        base = os.path.join(cfg.out_dir, f"grid_{cfg.width}x{cfg.height}_seed{cfg.seed if cfg.seed is not None else 'NA'}")
+        base = os.path.join(
+        cfg.out_dir,
+        cfg.name if cfg.name is not None else (
+            f"grid_{cfg.width}x{cfg.height}_seed{cfg.seed}" if cfg.seed is not None else f"grid_{cfg.width}x{cfg.height}"
+            )
+        )
         g.save_all(base, summary)
         print(f"\nFile salvati con prefisso: {base}.[csv|txt|json]")
 
