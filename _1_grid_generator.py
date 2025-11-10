@@ -38,6 +38,7 @@ import argparse
 import json
 import os
 import random
+from pathlib import Path
 from dataclasses import dataclass, asdict
 from typing import List, Tuple, Dict
 
@@ -127,8 +128,8 @@ class Grid:
             f.write(self.to_csv())
         with open(basepath + ".txt", "w", encoding="utf-8") as f:
             f.write(self.to_ascii())
-        with open(basepath + ".json", "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2)
+        #with open(basepath + ".json", "w", encoding="utf-8") as f:
+            #json.dump(meta, f, indent=2)
 
 
 def _random_free_cell(g: Grid, rnd: random.Random) -> Cell | None:
@@ -358,8 +359,6 @@ def generate(config: GridConfig) -> Tuple[Grid, Dict]:
     }
 
     return g, summary
-
-
 
 def build_argparser() -> argparse.ArgumentParser: 
     p = argparse.ArgumentParser(description="Generatore di griglie con ostacoli (Compito 1)")
