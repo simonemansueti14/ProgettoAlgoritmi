@@ -319,6 +319,7 @@ def make_json_safe(obj):
 def main():
 
     #GENERAZIONE GRIGLIE
+    #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N OSTACOLI = DIM / FATTORE
     auto_generate_all_grids([7,8], 1)
 
     base_dir = Path(__file__).parent
