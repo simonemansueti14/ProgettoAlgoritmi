@@ -257,7 +257,7 @@ def summarize_results(summary: Dict):
         for direction, vals in res.items():
             print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, valid={vals['valid']}, variant={vals['variant']}")
 
-def plot_results(summary: Dict, variant:int, dim:int):
+def plot_results(summary: Dict, variant:int, dim:int, save_dir: Path | None=None):
     labels = list(summary.keys())
     times0, times1 = [], []
     for gname, res in summary.items():
@@ -275,10 +275,17 @@ def plot_results(summary: Dict, variant:int, dim:int):
     plt.title(f"Confronto tempi medi OtoD vs DtoO - variante: {variant} - dimensione griglie: {dim}x{dim}")
     plt.legend()
     plt.tight_layout()
+
+    if save_dir:
+        fname = save_dir / f"tempi_variant{variant}_{dim}x{dim}.png"
+        plt.savefig(fname, dpi=300)
+        plt.close()
+        print(f"📊 Grafico tempi salvato in: {fname.name}")
+
     plt.show()
 
 #------------- PLOT STATISTICHE COMPLEMENTARI ---------------------------
-def plot_stats(summary: Dict, variant:int, dim:int):
+def plot_stats(summary: Dict, variant:int, dim:int, save_dir:Path | None=None):
     labels = list(summary.keys())
     frontiers, tipo1, tipo2 = [], [], []
 
@@ -302,6 +309,13 @@ def plot_stats(summary: Dict, variant:int, dim:int):
     plt.title(f"Statistiche interne - variante: {variant} - griglie {dim}x{dim}")
     plt.legend()
     plt.tight_layout()
+
+    if save_dir:
+        fname = save_dir / f"stats_variant{variant}_{dim}x{dim}.png"
+        plt.savefig(fname, dpi=300)
+        plt.close()
+        print(f"📈 Grafico statistiche salvato in: {fname.name}")
+
     plt.show()
 
     # ---------------- converte math.inf in "inf" per errori JSON ------------------
@@ -322,9 +336,14 @@ def main():
     #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N OSTACOLI = DIM / FATTORE
     auto_generate_all_grids([7,8], 1)
 
+    #cartelle griglie
     base_dir = Path(__file__).parent
     grid_dir = base_dir / "experimental_grids"
     #param_file = base_dir / "experimental_params.json"
+
+    #cartelle plot
+    plots_dir = Path(__file__).parent / "results" / "plots"
+    plots_dir.mkdir(parents=True, exist_ok=True)
 
     if not grid_dir.exists():
         print("❌ Cartella experimental_grids/ non trovata.")
@@ -347,22 +366,23 @@ def main():
             continue
 
         print(f"\n=== 🔍 ESECUZIONE ESPERIMENTI SU {size_folder}/ ===")
+
         dim = int(size_folder.name.split('x')[0])
 
         # === VARIANTE 0 ===
         print("\n--- VARIANTE = 0 ---")
         summary_var0 = run_experiments(size_folder, variant=0, trials=5)
         summarize_results(summary_var0)
-        plot_results(summary_var0, 0, dim)
-        plot_stats(summary_var0, 0, int(size_folder.name.split('x')[0]))
+        plot_results(summary_var0, 0, dim, save_dir=plots_dir)
+        plot_stats(summary_var0, 0, dim, save_dir=plots_dir)
         combined_summary["variant_0"][size_folder.name] = make_json_safe(summary_var0)
 
         # === VARIANTE 1 ===
         print("\n--- VARIANTE = 1 ---")
         summary_var1 = run_experiments(size_folder, variant=1, trials=5)
         summarize_results(summary_var1)
-        plot_results(summary_var1, 1, dim)
-        plot_stats(summary_var1, 1, int(size_folder.name.split('x')[0]))
+        plot_results(summary_var1, 1, dim, save_dir=plots_dir)
+        plot_stats(summary_var1, 1, dim, save_dir=plots_dir)
         combined_summary["variant_1"][size_folder.name] = make_json_safe(summary_var1)
 
     # === SCRIVE I RISULTATI FINALI ===
