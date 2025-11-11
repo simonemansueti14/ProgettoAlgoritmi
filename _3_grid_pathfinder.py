@@ -69,9 +69,8 @@ def path_cost_by_steps(path: List[Cell]) -> float:
             return math.inf
     return total
 
-# ---------------------------------- CAMMINOMIN ricorsivo ----------------------------------
-def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Dict[str,int]=None, deadline: float=None, best: Tuple[float,List[Tuple[Cell,int]]]=None) -> Tuple[float,List[Tuple[Cell,int]],Dict[str,int],bool]:
-    """
+
+"""
     Algoritmo CAMMINOMIN con statistiche (requisito funzionale 1) e timeout (requisito funzionale 2):
     - Ritorna una tupla (lunghezza, sequenza_landmark, stats, completed)
     - blocked = insieme di celle da trattare come ostacoli (per ricorsione)
@@ -83,85 +82,88 @@ def cammino_minimo(g: Grid, O: Cell, D: Cell, blocked: Set[Cell]=None, stats: Di
     - best = miglior soluzione trovata finora (lunghezza, sequenza)
     - completed = True se il calcolo è arrivato a termine, False se interrotto
     """
-    if blocked is None: 
-        blocked = set()  # alla prima chiamata blocked è None, viene inizializzato come insieme vuoto
+
+# ---------------------------------- CAMMINOMIN ricorsivo ----------------------------------
+def cammino_minimo(
+    g: Grid, O: Cell, D: Cell, deadline: float = None,
+    blocked: Set[Cell] = None, stats: Dict[str, int] = None, best=None
+):
+    if blocked is None:
+        blocked = set()
     if stats is None:
-        # alla prima chiamata inizializza i contatori a zero
-        stats = {"frontier_count": 0, "tipo1_count": 0, "tipo2_count": 0}
+        stats = {"frontier_count": 0, "tipo1_count": 0, "tipo2_count": 0, "valorefalsoriga16": 0}
     if best is None:
         best = (math.inf, [])
 
-    # controllo timeout: se esiste una deadline e l'orologio ha superato quel tempo → interrompo e ritorno best_so_far
-    if deadline is not None and time.perf_counter() > deadline:
-        return best[0], best[1], stats, False  # False = non completato
+    #Stop se scaduto il tempo massimo
+    if deadline and time.perf_counter() > deadline:
+        return best[0], best[1], stats, False
 
-    # se O o D non sono libere, cammino impossibile → ritorna infinito, sequenza vuota e stats invariato
+    #Celle non valide
     if not g.is_free(*O) or not g.is_free(*D):
         return math.inf, [], stats, True
-    #se O==D
-    if O==D: return 0,[],stats,True
 
-    # calcolo contesto e complemento di O, ignorando le celle già bloccate
+    #Caso base: origine e destinazione coincidono
+    if O == D:
+        return 0, [], stats, True
+
+    #Calcola contesto e complemento, escludendo celle già bloccate
     context, complement = compute_context_and_complement(g, O)
     context = {c for c in context if c not in blocked}
     complement = {c for c in complement if c not in blocked}
-    closure = context.union(complement)  # chiusura = insieme di tutte le celle raggiungibili da O
+    closure = context.union(complement)
 
-    #debug
-    #print(f"contesto di {O}: {context}")
-    #print(f"complemento di {O}: {complement}")
-
-    # caso base: se la destinazione D è già nella chiusura di O
+    #Se la destinazione è già nel contesto o complemento → cammino diretto
     if D in closure:
-        t = 1 if D in context else 2  # assegna il tipo in base a dove si trova D
-        if t == 1:
-            stats["tipo1_count"] += 1
-        else:
-            stats["tipo2_count"] += 1
-        # ritorna la distanza libera, la sequenza di landmark e i contatori aggiornati
-        return dlib(O,D), [(O,0),(D,t)], stats, True
+        t = 1 if D in context else 2
+        stats[f"tipo{t}_count"] += 1
+        return dlib(O, D), [(O, 0), (D, t)], stats, True
 
-    # altrimenti calcolo la frontiera della chiusura
+    #Calcola la frontiera e aggiorna le statistiche
     frontier = compute_frontier(g, context, complement, O)
-    #debug
-    #print(f"Frontiera trovata da {O}: {[f for f,_ in frontier]}")
-    stats["frontier_count"] += len(frontier)  # aggiorno il contatore con le celle di frontiera trovate
+    stats["frontier_count"] += len(frontier)
 
-    lunghezzaMin = math.inf  # inizializza la migliore lunghezza a infinito
-    seqMin: List[Tuple[Cell,int]] = []  # inizializza la miglior sequenza vuota
-    completed = True  # se non scatta timeout rimane True
+    if not frontier:
+        # Vicolo cieco: nessuna frontiera disponibile
+        return math.inf, [], stats, True
 
-    # scorro tutte le celle di frontiera
-    for F,t in frontier:
-        # controllo timeout ad ogni passo
-        if deadline is not None and time.perf_counter() > deadline:
+    lunghezzaMin, seqMin, completed = math.inf, [], True
+
+    #Esplora ogni cella di frontiera
+    for F, t in frontier:
+        #Controllo deadline ad ogni iterazione
+        if deadline and time.perf_counter() > deadline:
             return best[0], best[1], stats, False
 
-        # aggiorno i contatori in base al tipo della cella di frontiera
-        if t == 1:
-            stats["tipo1_count"] += 1
-        else:
-            stats["tipo2_count"] += 1
+        stats[f"tipo{t}_count"] += 1
+        lF = dlib(O, F)
 
-        # calcolo distanza libera da O a F (cammino diretto)
-        lF = dlib(O,F)
-        # richiamo cammino_minimo ricorsivamente da F a D,
-        # bloccando anche tutte le celle della chiusura per evitare cicli
-        lFD, seqFD, stats, sub_completed = cammino_minimo(g, F, D, blocked.union(closure), stats, deadline, best)
+        #Condizione euristica (riga 16 pseudocodice):
+        #Se il cammino parziale + distanza stimata al target
+        #è già peggiore del migliore trovato, evita la ricorsione
+        if lF + dlib(F, D) >= best[0]:
+            continue
+
+        #Ricorsione sul sottoproblema (F → D)
+        stats["valorefalsoriga16"]+=1
+        lFD, seqFD, stats, sub_completed = cammino_minimo(
+            g, F, D, deadline, blocked.union(closure), stats, best
+        )
+
         if not sub_completed:
             return best[0], best[1], stats, False
-        if lFD == math.inf:  # se la ricorsione non trova cammino → salta
+        if lFD == math.inf:
             continue
-        lTot = lF + lFD  # lunghezza totale da O a F + da F a D
-        if lTot < lunghezzaMin:  # se è la migliore trovata finora
+
+        #Calcolo della lunghezza totale
+        lTot = lF + lFD
+
+        if lTot < lunghezzaMin:
             lunghezzaMin = lTot
-            # costruisco la sequenza finale compattando O→F e F→D
-            seqMin = [(O,0),(F,t)] + seqFD[1:]
+            seqMin = [(O, 0), (F, t)] + seqFD[1:]
             best = (lunghezzaMin, seqMin)
 
-    # ritorno la miglior lunghezza, la miglior sequenza, i contatori aggiornati e completed
     return lunghezzaMin, seqMin, stats, completed
-
 
 # ---------------------------------- RICOSTRUZIONE CAMMINO ----------------------------------
 #punto per gruppi da 3
@@ -389,7 +391,8 @@ def main():
     #riepilogo statistico
     print("\n-- Riepilogo istanza --")
     print(f"Dimensioni griglia: {g.h} x {g.w}")
-    print(f"Celle di frontiera esplorate: {stats['frontier_count']}")
+    print(f"Celle di frontiera considerate: {stats['frontier_count']}")
+    print(f"Ricorsioni effettuate: {stats['valorefalsoriga16']}")
     print(f"Scelte tipo1: {stats['tipo1_count']}")
     print(f"Scelte tipo2: {stats['tipo2_count']}")
     print(f"Calcolo completato: {completed}")

@@ -15,6 +15,7 @@ import os, csv, math, time, json, statistics, random
 from pathlib import Path
 from typing import Tuple, List, Dict, Set
 import matplotlib.pyplot as plt
+import numpy as np
 from pathlib import Path
 from dataclasses import asdict
 
@@ -34,48 +35,91 @@ def load_grid_from_csv(path: Path) -> Grid:
     return g
 
 # ---------------------------------- VARIANTE CAMMINO MINIMO ----------------------------------
-def cammino_minimo_variant(g: Grid, O: Cell, D: Cell, variant: int=0, deadline: float=None,
-                           blocked: Set[Cell]=None, stats: Dict[str,int]=None, best=None):
-    if blocked is None: blocked = set()
-    if stats is None: stats = {"frontier_count": 0, "tipo1_count": 0, "tipo2_count": 0}
-    if best is None: best = (math.inf, [])
+def cammino_minimo_variant(
+    g: Grid, O: Cell, D: Cell, variant: int = 0, deadline: float = None,
+    blocked: Set[Cell] = None, stats: Dict[str, int] = None, best=None
+):
+    if blocked is None:
+        blocked = set()
+    if stats is None:
+        stats = {"frontier_count": 0, "tipo1_count": 0, "tipo2_count": 0, "valorefalsoriga16": 0}
+    if best is None:
+        best = (math.inf, [])
 
+    #Stop se scaduto il tempo massimo
     if deadline and time.perf_counter() > deadline:
         return best[0], best[1], stats, False
+
+    #Celle non valide
     if not g.is_free(*O) or not g.is_free(*D):
         return math.inf, [], stats, True
+
+    #Caso base: origine e destinazione coincidono
     if O == D:
         return 0, [], stats, True
 
+    #Calcola contesto e complemento, escludendo celle già bloccate
     context, complement = compute_context_and_complement(g, O)
     context = {c for c in context if c not in blocked}
     complement = {c for c in complement if c not in blocked}
     closure = context.union(complement)
 
+    #Se la destinazione è già nel contesto o complemento → cammino diretto
     if D in closure:
         t = 1 if D in context else 2
         stats[f"tipo{t}_count"] += 1
-        return dlib(O, D), [(O,0),(D,t)], stats, True
+        return dlib(O, D), [(O, 0), (D, t)], stats, True
 
+    #Calcola la frontiera e aggiorna le statistiche
     frontier = compute_frontier(g, context, complement, O)
     stats["frontier_count"] += len(frontier)
 
+    if not frontier:
+        # Vicolo cieco: nessuna frontiera disponibile
+        return math.inf, [], stats, True
+
     lunghezzaMin, seqMin, completed = math.inf, [], True
+
+    #Esplora ogni cella di frontiera
     for F, t in frontier:
+        #Controllo deadline ad ogni iterazione
         if deadline and time.perf_counter() > deadline:
             return best[0], best[1], stats, False
+
         stats[f"tipo{t}_count"] += 1
         lF = dlib(O, F)
-        lFD, seqFD, stats, sub_completed = cammino_minimo_variant(g, F, D, variant, deadline, blocked.union(closure), stats, best)
-        if not sub_completed: return best[0], best[1], stats, False
-        if lFD == math.inf: continue
+
+        #Condizione euristica (riga 16 pseudocodice):
+        #Se il cammino parziale + distanza stimata al target
+        #è già peggiore del migliore trovato, evita la ricorsione
+        if lF + dlib(F, D) >= best[0]:
+            continue
+
+        #Ricorsione sul sottoproblema (F → D)
+        stats["valorefalsoriga16"]+=1
+        lFD, seqFD, stats, sub_completed = cammino_minimo_variant(
+            g, F, D, variant, deadline, blocked.union(closure), stats, best
+        )
+
+        if not sub_completed:
+            return best[0], best[1], stats, False
+        if lFD == math.inf:
+            continue
+
+        #Calcolo della lunghezza totale
         lTot = lF + lFD
+
+        #Variante: se variant=1, aggiunge il pezzo dlib all'if
         toConfront = lTot if variant == 0 else lTot + dlib(F, D)
+
+        #Aggiorna il miglior cammino trovato
         if toConfront < lunghezzaMin:
             lunghezzaMin = lTot
-            seqMin = [(O,0),(F,t)] + seqFD[1:]
+            seqMin = [(O, 0), (F, t)] + seqFD[1:]
             best = (lunghezzaMin, seqMin)
+
     return lunghezzaMin, seqMin, stats, completed
+
 
 #---------------------METODO PER GENERAZIONE GRIGLIE SPERIMENTALI DA ES 1----------------------
 def auto_generate_all_grids(sizes:List, fattore_di_scala:int):
@@ -193,7 +237,7 @@ def checkDistanzeUguali(g: Grid, O: Cell, D: Cell):
 
 def printStatistiche(g:Grid, length:float, seq, stats:Dict[str,int], completed:bool):
     print(f"  Lunghezza: {length}")
-    print(f"  Frontiere: {stats['frontier_count']} | Tipo1: {stats['tipo1_count']} | Tipo2: {stats['tipo2_count']}")
+    print(f"  Frontiere: {stats['frontier_count']} | Tipo1: {stats['tipo1_count']} | Tipo2: {stats['tipo2_count']} | Ricorsioni effettuate: {stats['valorefalsoriga16']}")
     print(f"  Completato: {completed}")
     full_path = build_path_from_landmarks(g, seq)
     if validate_path(g, full_path):
@@ -205,7 +249,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
     for direction, label in [((O, D), "OtoD"), ((D, O), "DtoO")]:
         O_, D_ = direction
         lengths, times = [], []
-        frontier_counts, tipo1_counts, tipo2_counts = [], [], []
+        frontier_counts, tipo1_counts, tipo2_counts, valorefalsoriga16 = [], [], [], []
 
         print(label)
         for i in range(1, trials + 1):
@@ -213,13 +257,14 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
             length, _, stats, _ = cammino_minimo_variant(g, O_, D_, variant)
             elapsed = time.perf_counter() - start
 
-            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']}")
+            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']} | Ricorsioni effettuate: {stats['valorefalsoriga16']}")
 
             lengths.append(length)
             times.append(elapsed)
             frontier_counts.append(stats["frontier_count"])
             tipo1_counts.append(stats["tipo1_count"])
             tipo2_counts.append(stats["tipo2_count"])
+            valorefalsoriga16.append(stats["valorefalsoriga16"])
 
         results[label] = {
             "avg_length": statistics.mean(lengths),
@@ -227,6 +272,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
             "avg_frontier": statistics.mean(frontier_counts),
             "avg_tipo1": statistics.mean(tipo1_counts),
             "avg_tipo2": statistics.mean(tipo2_counts),
+            "valorefalsoriga16": statistics.mean(valorefalsoriga16),
             "valid": (lengths[-1] != math.inf),
             "variant": variant
         }
@@ -256,8 +302,9 @@ def summarize_results(summary: Dict):
     for gname, res in summary.items():
         print(f"\n🧩 {gname}")
         for direction, vals in res.items():
-            print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, valid={vals['valid']}, variant={vals['variant']}")
+            print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, valid={vals['valid']}, variant={vals['variant']}, Ricorsioni effettuate={vals['valorefalsoriga16']}")
 
+#---------------------------------------------PLOT PRESTAZIONI TEMPORALI---------------------------------------------
 def plot_results(summary: Dict, variant:int, dim:int, save_dir: Path | None=None):
     labels = list(summary.keys())
     times0, times1 = [], []
@@ -285,28 +332,33 @@ def plot_results(summary: Dict, variant:int, dim:int, save_dir: Path | None=None
 
     plt.show()
 
-#------------- PLOT STATISTICHE COMPLEMENTARI ---------------------------
+#--------------------------------------------- PLOT PRESTAZIONI SPAZIALI ---------------------------------------------
 def plot_stats(summary: Dict, variant:int, dim:int, save_dir:Path | None=None):
     labels = list(summary.keys())
-    frontiers, tipo1, tipo2 = [], [], []
-
+    frontiere_OtoD, frontiere_DtoO, tipo1, tipo2, valorefalsoriga16_OtoD, valorefalsoriga16_DtoO = [], [], [], [], [], []
     for gname, res in summary.items():
-        # media tra O→D e D→O per ogni statistica
-        f_mean = (res["OtoD"]["avg_frontier"] + res["DtoO"]["avg_frontier"]) / 2
-        t1_mean = (res["OtoD"]["avg_tipo1"] + res["DtoO"]["avg_tipo1"]) / 2
-        t2_mean = (res["OtoD"]["avg_tipo2"] + res["DtoO"]["avg_tipo2"]) / 2
-        frontiers.append(f_mean)
-        tipo1.append(t1_mean)
-        tipo2.append(t2_mean)
+        #append valori al grafico
+        frontiere_OtoD.append(res["OtoD"]["avg_frontier"])
+        frontiere_DtoO.append(res["DtoO"]["avg_frontier"])
+        tipo1.append((res["OtoD"]["avg_tipo1"] + res["DtoO"]["avg_tipo1"]) / 2)
+        tipo2.append((res["OtoD"]["avg_tipo2"] + res["DtoO"]["avg_tipo2"]) / 2)
+        valorefalsoriga16_OtoD.append(res["OtoD"]["valorefalsoriga16"])
+        valorefalsoriga16_DtoO.append(res["DtoO"]["valorefalsoriga16"])
 
-    x = range(len(labels))
-    plt.figure(figsize=(9, 5))
-    plt.bar(x, frontiers, width=0.25, label="Frontiere medie")
-    plt.bar([i + 0.25 for i in x], tipo1, width=0.25, label="Tipo 1")
-    plt.bar([i + 0.50 for i in x], tipo2, width=0.25, label="Tipo 2")
+    x = np.arange(len(labels))
+    width = 0.13  # larghezza di ogni barra
 
-    plt.xticks([i + 0.25 for i in x], labels, rotation=45, ha="right")
-    plt.ylabel("Valori medi")
+    plt.figure(figsize=(10, 5))
+    plt.bar(x - 2.5*width, frontiere_OtoD, width=width, label="Frontiere individuate O→D")
+    plt.bar(x - 1.5*width, frontiere_DtoO, width=width, label="Frontiere individuate D→O")
+    plt.bar(x - 0.5*width, tipo1, width=width, label="Scelte Tipo 1 (media O→D D→O)")
+    plt.bar(x + 0.5*width, tipo2, width=width, label="Scelte Tipo 2 (media O→D D→O)")
+    plt.bar(x + 1.5*width, valorefalsoriga16_OtoD, width=width, label="ricorsioni algoritmo effettuate (O→D)")
+    plt.bar(x + 2.5*width, valorefalsoriga16_DtoO, width=width, label="ricorsioni algoritmo effettuate (D→O)")
+    
+
+    plt.xticks(x, labels, rotation=45, ha="right")
+    plt.ylabel("Valori")
     plt.title(f"Statistiche interne - variante: {variant} - griglie {dim}x{dim}")
     plt.legend()
     plt.tight_layout()
@@ -315,9 +367,10 @@ def plot_stats(summary: Dict, variant:int, dim:int, save_dir:Path | None=None):
         fname = save_dir / f"stats_variant{variant}_{dim}x{dim}.png"
         plt.savefig(fname, dpi=300)
         plt.close()
-        print(f"📈 Grafico statistiche salvato in: {fname.name}")
+        print(f"Grafico statistiche salvato in: {fname.name}")
+    else:
+        plt.show()
 
-    plt.show()
 
     # ---------------- converte math.inf in "inf" per errori JSON ------------------
 def make_json_safe(obj):
@@ -333,7 +386,7 @@ def make_json_safe(obj):
 # ---------------------------------- MAIN AUTOMATICO ----------------------------------
 def main():
 
-    scelta = input("🔄 Vuoi rigenerare le griglie sperimentali? (s/n): ").strip().lower()
+    scelta = input("Vuoi rigenerare le griglie sperimentali? (s/n): ").strip().lower()
     if scelta == "s":
         #GENERAZIONE GRIGLIE
         #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N° OSTACOLI = DIM / FATTORE
@@ -369,7 +422,7 @@ def main():
         if not size_folder.is_dir():
             continue
 
-        print(f"\n=== 🔍 ESECUZIONE ESPERIMENTI SU {size_folder}/ ===")
+        print(f"\n=== ESECUZIONE ESPERIMENTI SU {size_folder}/ ===")
 
         dim = int(size_folder.name.split('x')[0])
 
