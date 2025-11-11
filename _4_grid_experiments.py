@@ -66,7 +66,7 @@ def cammino_minimo_variant(g: Grid, O: Cell, D: Cell, variant: int=0, deadline: 
             return best[0], best[1], stats, False
         stats[f"tipo{t}_count"] += 1
         lF = dlib(O, F)
-        lFD, seqFD, stats, sub_completed = cammino_minimo(g, F, D, blocked.union(closure), stats, deadline, best)
+        lFD, seqFD, stats, sub_completed = cammino_minimo_variant(g, F, D, variant, deadline, blocked.union(closure), stats, best)
         if not sub_completed: return best[0], best[1], stats, False
         if lFD == math.inf: continue
         lTot = lF + lFD
@@ -230,6 +230,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
             "valid": (lengths[-1] != math.inf),
             "variant": variant
         }
+        #print(" completata")
 
     return results
 
@@ -243,7 +244,7 @@ def run_experiments(grid_dir: Path, variant:int, trials:int=3) -> Dict:
 
         # 🔹 Scegli automaticamente origine e destinazione
         origin, dest = choose_origin_and_dest(g)
-        print(f"  O scelta: {origin}, D scelta: {dest}")
+        print(f"scelte automatiche O e D:  O={origin}, D={dest}")
 
         res = experiment(g, origin, dest, trials=trials, variant=variant)
         summary[grid_name] = res
@@ -332,9 +333,12 @@ def make_json_safe(obj):
 # ---------------------------------- MAIN AUTOMATICO ----------------------------------
 def main():
 
-    #GENERAZIONE GRIGLIE
-    #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N OSTACOLI = DIM / FATTORE
-    auto_generate_all_grids([7,8], 1)
+    scelta = input("🔄 Vuoi rigenerare le griglie sperimentali? (s/n): ").strip().lower()
+    if scelta == "s":
+        #GENERAZIONE GRIGLIE
+        #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N° OSTACOLI = DIM / FATTORE
+        #se si mettono griglie troppo piccole con fattore troppo alto, la griglia si riempie troppo di ostacoli, viceversa risulta estremamente sparsa.
+        auto_generate_all_grids([7,8], 3)
 
     #cartelle griglie
     base_dir = Path(__file__).parent
