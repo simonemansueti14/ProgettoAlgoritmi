@@ -48,28 +48,6 @@ def compute_frontier(g: Grid, context: Set[Cell], complement: Set[Cell], O: Cell
                 break
     return frontier
 
-#helper
-def path_cost_by_steps(path: List[Cell]) -> float:
-    """Calcola il costo (usando costi 1 per ortogonale, sqrt(2) per diagonale)
-       path è lista di celle in ordine (include origine e destinazione)."""
-    if not path or len(path) == 1:
-        return 0.0
-    total = 0.0
-    for i in range(len(path)-1):
-        r1,c1 = path[i]
-        r2,c2 = path[i+1]
-        dr = abs(r2-r1)
-        dc = abs(c2-c1)
-        if dr == 1 and dc == 1:
-            total += math.sqrt(2)
-        elif (dr == 1 and dc == 0) or (dr == 0 and dc == 1):
-            total += 1.0
-        else:
-            # passo non consentito come cella non adiacente: fallback ad infinito
-            return math.inf
-    return total
-
-
 """
     Algoritmo CAMMINOMIN con statistiche (requisito funzionale 1) e timeout (requisito funzionale 2):
     - Ritorna una tupla (lunghezza, sequenza_landmark, stats, completed)

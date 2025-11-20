@@ -235,14 +235,6 @@ def checkDistanzeUguali(g: Grid, O: Cell, D: Cell):
     lDO, _, _, _ = cammino_minimo(g,D,O)
     return lOD == lDO, lOD, lDO
 
-def printStatistiche(g:Grid, length:float, seq, stats:Dict[str,int], completed:bool):
-    print(f"  Lunghezza: {length}")
-    print(f"  Frontiere: {stats['frontier_count']} | Tipo1: {stats['tipo1_count']} | Tipo2: {stats['tipo2_count']} | Ricorsioni effettuate: {stats['valorefalsoriga16']}")
-    print(f"  Completato: {completed}")
-    full_path = build_path_from_landmarks(g, seq)
-    if validate_path(g, full_path):
-        print("⚠️ Percorso non valido (passa su ostacoli)")
-
 # ---------------------------------- ESPERIMENTI AUTOMATICI ----------------------------------
 def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
     results = {}
