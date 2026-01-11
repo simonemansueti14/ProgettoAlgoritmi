@@ -13,10 +13,11 @@ Algoritmi e Strutture Dati (a.a. 2024/25)
   * (requisito funzionale 2) possibilità di interrompere il calcolo con timeout
 """
 
-import argparse, csv, math, json, os, time
+import csv, math, json, time
 from typing import List, Tuple, Set, Dict
 from pathlib import Path
 from _1_grid_generator import Grid
+from datetime import datetime
 from _2_grid_analysis import dlib, compute_context_and_complement
 Cell = Tuple[int, int]
 
@@ -127,6 +128,10 @@ def cammino_minimo(
         lFD, seqFD, stats, sub_completed = cammino_minimo(
             g, F, D, deadline, blocked.union(closure), stats, best
         )
+
+        #---- MODIFICA: AGGIORNA BEST ANCHE SE LA SUB.RICORSIONE NON E' COMPLETATA ---- => SODDISFA ALLA SLIDE 71 PUNTO 2
+        if lFD != math.inf and lF + lFD < best[0]:
+            best = (lF + lFD, [(O,0),(F,t)] + seqFD[1:])
 
         if not sub_completed:
             return best[0], best[1], stats, False
@@ -343,16 +348,30 @@ def main():
 
     #chiama funzione ricorsiva con deadline
     length, seq, stats, completed = cammino_minimo(g, O, D, deadline=deadline)
+
+    cam_comp_info = None
+    d_min_info = None
+    land_info = None
+
     if not completed:
         print("Calcolo interrotto (timeout raggiunto) risultato parziale:")
+        cam_comp_info="cammino ricavato finora: "
+        d_min_info="distanza minima ricavata finora: "
+        land_info = "Sequenza landmark ottenuta finora: "
+
     elif length == math.inf:
         print("Nessun cammino minimo trovato (celle non raggiungibili)")
         #return
+    else: 
+        cam_comp_info="cammino completo: "
+        d_min_info = "distanza minima: "
+        land_info = "Sequenza landmark finale: "
 
 
 
     print(f"Calcolo del cammino minimo da O={O} a D={D}")
-    print(f"Sequenza landmark = {seq}")
+
+    print(f"{land_info} = {seq}")
 
     # gruppo da 3: costruzione cammino completo
     #ricostruisce la sequenza completa di celle, poi verifica se il percorso passa davvero solo da 
@@ -360,8 +379,8 @@ def main():
 
     full_path = build_path_from_landmarks(g, seq)
     
-    print(f"Cammino completo ({len(full_path)} celle): {full_path}")
-    print(f"distanza minima: {length}")
+    print(f"{cam_comp_info} ({len(full_path)} celle): {full_path}")
+    print(f"{d_min_info} {length}")
 
     
     if validate_path(g,full_path): print("Errore! Il percorso intermedio passa sopra ad ostacoli!")
@@ -391,9 +410,17 @@ def main():
                 "tipo2_count": stats["tipo2_count"]
             }
         }
-        with open("cammino_output.json","w",encoding="utf-8") as f:
+
+        res_dir = Path(__file__).parent / "output_es_3"
+        res_dir.mkdir(exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        output_file = res_dir / f"cammino_output_{timestamp}.json"
+
+        with open(output_file,"w",encoding="utf-8") as f:
             json.dump(out_json,f,indent=2)
-        print("\nRisultato salvato in cammino_output.json")
+        print(f"\nRisultato salvato in {output_file}")
 
 if __name__ == "__main__":
     main()

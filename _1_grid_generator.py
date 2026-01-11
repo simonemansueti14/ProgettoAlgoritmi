@@ -183,17 +183,28 @@ def place_agglomerate(g: Grid, size: int, rnd: random.Random) -> int:
                 frontier.append((nr, nc))
     return len(blocked)
 
-def place_agglomerates(g: Grid, count: int, size_min: int, size_max: int, rnd: random.Random) -> Dict[str,int]:
+def place_agglomerates(g: Grid, count: int, size_min: int, size_max: int,
+                       rnd: random.Random) -> Dict[str, int]:
     placed_clusters = 0
     placed_cells = 0
     attempts = 0
+
+    # limiti geometrici massimi (non più grandi di griglia)
+    max_size_allowed = g.h * g.w  # oppure un massimo più realistico
+    size_min_eff = max(1, size_min)
+    size_max_eff = min(size_max, max_size_allowed)
+
+    if size_min_eff > size_max_eff:
+        return {"clusters": 0, "cells": 0}
+
     while placed_clusters < count and attempts < count * 20:
         attempts += 1
-        size = rnd.randint(size_min, size_max)
+        size = rnd.randint(size_min_eff, size_max_eff)
         got = place_agglomerate(g, size, rnd)
         if got > 0:
             placed_clusters += 1
             placed_cells += got
+
     return {"clusters": placed_clusters, "cells": placed_cells}
 
 
@@ -223,17 +234,29 @@ def place_diagonal_chain(g: Grid, length: int, rnd: random.Random) -> int:
     return placed
 
 
-def place_diagonals(g: Grid, count: int, len_min: int, len_max: int, rnd: random.Random) -> Dict[str,int]:
+def place_diagonals(g: Grid, count: int, len_min: int, len_max: int,
+                    rnd: random.Random) -> Dict[str, int]:
     chains = 0
     cells = 0
-    attempts = 0 #numero di tentativi fatti
+    attempts = 0  # numero di tentativi fatti
+
+    # massima lunghezza possibile in diagonale
+    max_len_allowed = min(g.w, g.h)
+    len_min_eff = max(1, len_min)
+    len_max_eff = min(len_max, max_len_allowed)
+
+    # se non è possibile nessuna catena → esci subito
+    if len_min_eff > len_max_eff:
+        return {"chains": 0, "cells": 0}
+
     while chains < count and attempts < count * 20:
         attempts += 1
-        L = rnd.randint(len_min, len_max)
+        L = rnd.randint(len_min_eff, len_max_eff)
         got = place_diagonal_chain(g, L, rnd)
-        if got >= max(2, len_min // 2):
+        if got >= max(2, len_min_eff // 2):
             chains += 1
             cells += got
+
     return {"chains": chains, "cells": cells}
 
 
@@ -260,25 +283,53 @@ def _draw_frame(g: Grid, top: int, left: int, height: int, width: int, thick: in
     return placed
 
 
-def place_frames(g: Grid, count: int, minw: int, minh: int, maxw: int, maxh: int, thick: int, rnd: random.Random) -> Dict[str,int]:
+def place_frames(g: Grid, count: int, minw: int, minh: int, maxw: int, maxh: int, thick: int, rnd: random.Random) -> Dict[str, int]:
     frames = 0
     cells = 0
     attempts = 0
+
+    # limiti geometrici reali
+    max_w_geom = g.w - 2
+    max_h_geom = g.h - 2
+
+    # se la griglia è troppo piccola per qualunque frame
+    if max_w_geom < 1 or max_h_geom < 1:
+        return {"frames": 0, "cells": 0}
+
+    # adatta i minimi
+    minw_eff = max(1, minw)
+    minh_eff = max(1, minh)
+
+    # adatta i massimi
+    maxw_eff = min(maxw, max_w_geom)
+    maxh_eff = min(maxh, max_h_geom)
+
+    # se dopo l'adattamento il range è vuoto → nessun frame
+    if minw_eff > maxw_eff or minh_eff > maxh_eff:
+        return {"frames": 0, "cells": 0}
+
     while frames < count and attempts < count * 50:
         attempts += 1
-        w = rnd.randint(minw, min(maxw, g.w-2))
-        h = rnd.randint(minh, min(maxh, g.h-2))
+
+        w = rnd.randint(minw_eff, maxw_eff)
+        h = rnd.randint(minh_eff, maxh_eff)
+
+        # spessore compatibile
+        if min(w, h) <= 2 * thick:
+            continue
+
         left = rnd.randint(0, g.w - w - 1)
         top = rnd.randint(0, g.h - h - 1)
-        if min(w, h) <= 2*thick:
-            continue  
+
         before = g.occupancy()
         _draw_frame(g, top, left, h, w, thick)
         after = g.occupancy()
+
         delta = after - before
         if delta > 0:
             frames += 1
             cells += delta
+
     return {"frames": frames, "cells": cells}
 
 
@@ -300,27 +351,51 @@ def _draw_bar(g: Grid, r0: int, c0: int, length: int, orient: str, thick: int) -
     return placed
 
 
-def place_bars(g: Grid, count: int, len_min: int, len_max: int, thick: int, rnd: random.Random) -> Dict[str,int]:
+def place_bars(g: Grid, count: int, len_min: int, len_max: int,
+               thick: int, rnd: random.Random) -> Dict[str, int]:
     bars = 0
     cells = 0
     attempts = 0
+
+    # lunghezze massime geometriche
+    max_L_h = g.w
+    max_L_v = g.h
+
+    # lunghezze minime effettive
+    len_min_eff = max(1, len_min)
+    len_max_eff_h = min(len_max, max_L_h)
+    len_max_eff_v = min(len_max, max_L_v)
+
+    # se non esiste nessuna barra possibile
+    if len_min_eff > len_max_eff_h and len_min_eff > len_max_eff_v:
+        return {"bars": 0, "cells": 0}
+
     while bars < count and attempts < count * 50:
         attempts += 1
         orient = 'H' if rnd.random() < 0.5 else 'V'
-        L = rnd.randint(len_min, len_max)
+
         if orient == 'H':
+            if len_min_eff > len_max_eff_h:
+                continue
+            L = rnd.randint(len_min_eff, len_max_eff_h)
             r0 = rnd.randint(0, max(0, g.h - thick))
-            c0 = rnd.randint(0, g.w - 1)
+            c0 = rnd.randint(0, g.w - L)
         else:
-            r0 = rnd.randint(0, g.h - 1)
+            if len_min_eff > len_max_eff_v:
+                continue
+            L = rnd.randint(len_min_eff, len_max_eff_v)
+            r0 = rnd.randint(0, g.h - L)
             c0 = rnd.randint(0, max(0, g.w - thick))
+
         before = g.occupancy()
         _draw_bar(g, r0, c0, L, orient, thick)
         after = g.occupancy()
+
         delta = after - before
         if delta > 0:
             bars += 1
             cells += delta
+
     return {"bars": bars, "cells": cells}
 
 

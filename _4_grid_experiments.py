@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
 from dataclasses import asdict
+from datetime import datetime
 
 from _1_grid_generator import Grid, GridConfig, generate
 from _2_grid_analysis import dlib, compute_context_and_complement
@@ -101,6 +102,10 @@ def cammino_minimo_variant(
             g, F, D, variant, deadline, blocked.union(closure), stats, best
         )
 
+        #Modifica per risultato parziale deadline
+        if lFD != math.inf and lF + lFD < best[0]:
+            best = (lF + lFD, [(O,0),(F,t)] + seqFD[1:])
+
         if not sub_completed:
             return best[0], best[1], stats, False
         if lFD == math.inf:
@@ -122,8 +127,8 @@ def cammino_minimo_variant(
 
 
 #---------------------METODO PER GENERAZIONE GRIGLIE SPERIMENTALI DA ES 1----------------------
-def auto_generate_all_grids(sizes:List, fattore_di_scala:int):
-    base_dir = Path(__file__).parent / "experimental_grids"
+def auto_generate_all_grids(sizes:List, fattore_di_scala:int, timestamp):
+    base_dir = Path(__file__).parent / f"experimental_grids_es4_{timestamp}"
     base_dir.mkdir(exist_ok=True)
 
     #tipi di ostacoli
@@ -236,7 +241,7 @@ def checkDistanzeUguali(g: Grid, O: Cell, D: Cell):
     return lOD == lDO, lOD, lDO
 
 # ---------------------------------- ESPERIMENTI AUTOMATICI ----------------------------------
-def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
+def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0, deadline:float=math.inf) -> Dict:
     results = {}
     for direction, label in [((O, D), "OtoD"), ((D, O), "DtoO")]:
         O_, D_ = direction
@@ -246,10 +251,11 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
         print(label)
         for i in range(1, trials + 1):
             start = time.perf_counter()
-            length, _, stats, _ = cammino_minimo_variant(g, O_, D_, variant)
+            deadline_assoluta = start+deadline
+            length, _, stats, completed = cammino_minimo_variant(g, O_, D_, variant, deadline_assoluta)
             elapsed = time.perf_counter() - start
 
-            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']} | Ricorsioni effettuate: {stats['valorefalsoriga16']}")
+            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']} | Ricorsioni effettuate: {stats['valorefalsoriga16']} | Completato: {completed}")
 
             lengths.append(length)
             times.append(elapsed)
@@ -265,7 +271,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
             "avg_tipo1": statistics.mean(tipo1_counts),
             "avg_tipo2": statistics.mean(tipo2_counts),
             "valorefalsoriga16": statistics.mean(valorefalsoriga16),
-            "valid": (lengths[-1] != math.inf),
+            "valid": completed,
             "variant": variant
         }
         #print(" completata")
@@ -273,7 +279,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0) -> Dict:
     return results
 
 
-def run_experiments(grid_dir: Path, variant:int, trials:int=3) -> Dict:
+def run_experiments(grid_dir: Path, variant:int, trials:int=3, deadline:float=math.inf) -> Dict:
     summary = {}
     for grid_csv in grid_dir.glob("*.csv"):
         grid_name = grid_csv.stem
@@ -284,7 +290,7 @@ def run_experiments(grid_dir: Path, variant:int, trials:int=3) -> Dict:
         origin, dest = choose_origin_and_dest(g)
         print(f"scelte automatiche O e D:  O={origin}, D={dest}")
 
-        res = experiment(g, origin, dest, trials=trials, variant=variant)
+        res = experiment(g, origin, dest, trials=trials, variant=variant, deadline=deadline)
         summary[grid_name] = res
     return summary
 
@@ -294,7 +300,7 @@ def summarize_results(summary: Dict):
     for gname, res in summary.items():
         print(f"\n🧩 {gname}")
         for direction, vals in res.items():
-            print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, valid={vals['valid']}, variant={vals['variant']}, Ricorsioni effettuate={vals['valorefalsoriga16']}")
+            print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, completato={vals['valid']}, variant={vals['variant']}, Ricorsioni effettuate={vals['valorefalsoriga16']}")
 
 #---------------------------------------------PLOT PRESTAZIONI TEMPORALI---------------------------------------------
 def plot_results(summary: Dict, variant:int, dim:int, save_dir: Path | None=None):
@@ -375,27 +381,68 @@ def make_json_safe(obj):
     else:
         return obj
 
-# ---------------------------------- MAIN AUTOMATICO ----------------------------------
+# ---------------------------------- MAIN ----------------------------------
 def main():
 
-    scelta = input("Vuoi rigenerare le griglie sperimentali? (s/n): ").strip().lower()
-    if scelta == "s":
-        #GENERAZIONE GRIGLIE
-        #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N° OSTACOLI = DIM / FATTORE
-        #se si mettono griglie troppo piccole con fattore troppo alto, la griglia si riempie troppo di ostacoli, viceversa risulta estremamente sparsa.
-        auto_generate_all_grids([7,8], 3)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    #GENERAZIONE GRIGLIE
+    #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N° OSTACOLI = DIM / FATTORE
+    #se si mettono griglie troppo piccole con fattore troppo alto, la griglia si riempie troppo di ostacoli, viceversa risulta estremamente sparsa.
+    #impostare anche la deadline in secondi, verrà passata come start+deadline in automatico al metodo experiment()
+    #auto_generate_all_grids([20,24], 5, timestamp)
+    #setDeadline = 10
+
+    setDeadline = None
+    sizes = []
+    print("Inserisci la dim n delle griglie n×n (INVIO per terminare):")
+
+    while True:
+        val = input("n = ").strip()
+        if val == "":
+            break
+        if not val.isdigit() or int(val) <= 0:
+            print("Inserisci un intero positivo!")
+            continue
+        sizes.append(int(val))
+
+    if not sizes:
+        print("Nessuna dimensione inserita")
+        return
+
+    # fattore di scala
+    while True:
+        scale = input("Inserisci fattore di scala per gli ostacoli: ").strip()
+        if scale.isdigit() and int(scale) > 0:
+            fattore_di_scala = int(scale)
+            break
+        print("Inserisci un intero positivo!")
+
+    # deadline
+    while True:
+        dl = input("Inserisci deadline (secondi): ").strip()
+        try:
+            setDeadline = float(dl)
+            if setDeadline > 0:
+                break
+        except ValueError:
+            pass
+        print("Inserisci un numero positivo!")
+
+    #== GENERAZIONE EFFETTIVA GRIGLIE ==
+    auto_generate_all_grids(sizes, fattore_di_scala, timestamp)
 
     #cartelle griglie
     base_dir = Path(__file__).parent
-    grid_dir = base_dir / "experimental_grids"
+    grid_dir = base_dir / f"experimental_grids_es4_{timestamp}"
     #param_file = base_dir / "experimental_params.json"
 
     #cartelle plot
-    plots_dir = Path(__file__).parent / "results" / "plots"
+    plots_dir = Path(__file__).parent / "results_es4" / "plots" / f"{timestamp}"
     plots_dir.mkdir(parents=True, exist_ok=True)
 
     if not grid_dir.exists():
-        print("❌ Cartella experimental_grids/ non trovata.")
+        print(f"❌ Cartella {grid_dir}/ non trovata.")
         return
     #if not param_file.exists():
         #print("❌ File experimental_params.json non trovato.")
@@ -420,7 +467,7 @@ def main():
 
         # === VARIANTE 0 ===
         print("\n--- VARIANTE = 0 ---")
-        summary_var0 = run_experiments(size_folder, variant=0, trials=5)
+        summary_var0 = run_experiments(size_folder, variant=0, trials=5, deadline=setDeadline)
         summarize_results(summary_var0)
         plot_results(summary_var0, 0, dim, save_dir=plots_dir)
         plot_stats(summary_var0, 0, dim, save_dir=plots_dir)
@@ -428,14 +475,17 @@ def main():
 
         # === VARIANTE 1 ===
         print("\n--- VARIANTE = 1 ---")
-        summary_var1 = run_experiments(size_folder, variant=1, trials=5)
+        summary_var1 = run_experiments(size_folder, variant=1, trials=5, deadline=setDeadline)
         summarize_results(summary_var1)
         plot_results(summary_var1, 1, dim, save_dir=plots_dir)
         plot_stats(summary_var1, 1, dim, save_dir=plots_dir)
         combined_summary["variant_1"][size_folder.name] = make_json_safe(summary_var1)
 
     # === SCRIVE I RISULTATI FINALI ===
-    output_file = base_dir / "experiments_output.json"
+    json_out_dir = Path(__file__).parent / "results_es4" / "json_outputs"
+    json_out_dir.mkdir(exist_ok=True)
+
+    output_file = json_out_dir / f"experiments_output_{timestamp}.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(combined_summary, f, indent=2)
 
