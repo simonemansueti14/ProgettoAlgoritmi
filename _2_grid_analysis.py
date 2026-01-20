@@ -40,147 +40,130 @@ def dlib(o: Cell, d: Cell, cont: Set[Cell]=None, comp: Set[Cell]=None) -> float:
 # ---------------------------------- CONTESTO E COMPLEMENTO ----------------------------------
 #data una griglia g e una cella origine O, calcola il contesto e il complemento di O
 def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
- 
     context: Set[Cell] = set()
     complement: Set[Cell] = set()
-
-    rows, cols = g.h, g.w
+    
     r0, c0 = O
-
-    if not g.in_bounds(r0, c0):
-        raise ValueError(f"Cella origine O={O} fuori dai limiti della griglia {rows}x{cols}")
-    if not g.is_free(r0, c0):
-        raise ValueError(f"Cella origine O={O} impostata su un ostacolo!")
-
-    # Direzioni: (dr, dc)
-    diagonals = [(-1, 1), (-1, -1), (1, -1), (1, 1)]  # NE, NW, SW, SE
-    horizontals = [(0, 1), (0, -1)]                   # E, W
-    verticals = [(-1, 0), (1, 0)]                     # N, S
-
-    # funzione ausiliaria per verificare se un percorso dritto o obliquo è libero
-    #Ritorna la cella finale se tutti i passi sono liberi, altrimenti None
-    def free_path(r, c, dr, dc, steps) -> Tuple[int, int] | None:
-        for _ in range(steps):
-            r += dr
-            c += dc
-            if not g.in_bounds(r, c) or not g.is_free(r, c):
-                return None
-        return (r, c)
-
-    # Itera su tutte le celle della griglia
-    for r in range(rows):
-        for c in range(cols):
+    
+    if not g.in_bounds(r0, c0) or not g.is_free(r0, c0):
+        raise ValueError(f"Origine {O} non valida")
+    
+    # Per ogni cella, determina se è raggiungibile e come
+    for r in range(g.h):
+        for c in range(g.w):
             if (r, c) == O or not g.is_free(r, c):
                 continue
-
-            found_type1 = False
-            found_type2 = False
-
-            # --- TIPO 1: oblique poi rette ---
-            for ddr, ddc in diagonals:
-                # prova k passi diagonali
-                for k in range(0, max(rows, cols)):
-                    #Se free_path su k passi ritorna None => la diagonale con k passi è bloccata, non proviamo k più grandi in quella direzione (break)
-                    start = free_path(r0, c0, ddr, ddc, k)
-                    if start is None:
-                        break
-                    sr, sc = start
-                    # se la cella raggiunta è già la destinazione => tipo 1 (caso particolare tutto obliquo senza rette)
-                    if (sr, sc) == (r, c):
-                        found_type1 = True
-                        break
-                    # poi prova, partendo da quella cella, le rette ammesse per quel quadrante (orizzontale o verticale allontanandomi dall'origine)
-                    for dr, dc in [(0, ddc), (ddr, 0)]:
-                        for m in range(1, max(rows, cols)):
-                            end = free_path(sr, sc, dr, dc, m)
-                            if end is None:
-                                break
-                            if end == (r, c):
-                                found_type1 = True
-                                break
-                        if found_type1:
-                            break
-                    if found_type1:
-                        break
-                if found_type1:
-                    break
-
-            # includi anche i cammini puri (solo retti o solo diagonali)
-            if not found_type1:
-                # solo orizzontale o verticale
-                for dr, dc in horizontals + verticals:
-                    #uso free_path con un numero di passi pari alla distanza
-                    end = free_path(r0, c0, dr, dc, max(abs(r - r0), abs(c - c0)))
-                    if end == (r, c):
-                        found_type1 = True
-                        break
-                # solo diagonale (se a sua volta già non è stato raggiungibile con oriz/vert)
-                if not found_type1:
-                    for dr, dc in diagonals:
-                        end = free_path(r0, c0, dr, dc, abs(r - r0))
-                        if end == (r, c):
-                            found_type1 = True
-                            break
-
-            # --- TIPO 2: dritte poi oblique (coerenti col quadrante) ---
-            for dr, dc in horizontals + verticals:
-                for m in range(1, max(rows, cols)):
-                    start = free_path(r0, c0, dr, dc, m)
-                    if start is None:
-                        break
-                    sr, sc = start
-
-                    # determina il quadrante di (sr,sc) rispetto all'origine (r0,c0)
-                    possible_diagonals = []
-
-                    if sr < r0 and sc > c0:           # Quadrante I
-                        possible_diagonals = [(-1, 1)]    # NE
-                    elif sr < r0 and sc < c0:         # Quadrante II
-                        possible_diagonals = [(-1, -1)]   # NW
-                    elif sr > r0 and sc < c0:         # Quadrante III
-                        possible_diagonals = [(1, -1)]    # SW
-                    elif sr > r0 and sc > c0:         # Quadrante IV
-                        possible_diagonals = [(1, 1)]     # SE
-                    else:
-                        # Caso bordo: stessa riga o stessa colonna
-                        if sr == r0:
-                            # stessa riga: determinato dalla direzione orizzontale
-                            if sc > c0:
-                                possible_diagonals = [(-1, 1), (1, 1)]   # NE, SE
-                            elif sc < c0:
-                                possible_diagonals = [(-1, -1), (1, -1)] # NW, SW
-                        elif sc == c0:
-                            # stessa colonna: determinato dalla direzione verticale
-                            if sr < r0:
-                                possible_diagonals = [(-1, 1), (-1, -1)] # NE, NW
-                            elif sr > r0:
-                                possible_diagonals = [(1, 1), (1, -1)]   # SE, SW
-
-                    # ora prova solo le diagonali consentite
-                    for ddr, ddc in possible_diagonals:
-                        # pruning: la diagonale deve effettivamente puntare verso la destinazione
-                        if (r - sr) * ddr < 0 or (c - sc) * ddc < 0:
-                            continue
-                        for k in range(1, max(rows, cols)):
-                            end = free_path(sr, sc, ddr, ddc, k)
-                            if end is None:
-                                break
-                            if end == (r, c):
-                                found_type2 = True
-                                break
-                        if found_type2:
-                            break
-                    if found_type2:
-                        break
-                if found_type2:
-                    break
-
-            if found_type1:
+            
+            # Calcola offset
+            dr, dc = r - r0, c - c0
+            
+            # Verifica raggiungibilità Tipo 1 e Tipo 2
+            if is_type1_reachable(g, r0, c0, r, c, dr, dc):
                 context.add((r, c))
-            elif found_type2:
+            elif is_type2_reachable(g, r0, c0, r, c, dr, dc):
                 complement.add((r, c))
-
+    
     return context, complement
+
+
+def is_type1_reachable(g: Grid, r0: int, c0: int, r: int, c: int, 
+                       dr: int, dc: int) -> bool:
+    """Tipo 1: Diagonale→Ortogonale (o solo uno dei due)"""
+    
+    # Caso 1: Solo ortogonale (stessa riga O colonna)
+    if dr == 0:  # Stessa riga
+        return is_path_free(g, r0, c0, 0, sign(dc), abs(dc))
+    if dc == 0:  # Stessa colonna
+        return is_path_free(g, r0, c0, sign(dr), 0, abs(dr))
+    
+    # Caso 2: Solo diagonale
+    if abs(dr) == abs(dc):
+        if is_path_free(g, r0, c0, sign(dr), sign(dc), abs(dr)):
+            return True
+    
+    # Caso 3: Diagonale + Ortogonale
+    # Prova tutti i punti di svolta possibili sulla diagonale
+    diag_steps = min(abs(dr), abs(dc))
+    ddr, ddc = sign(dr), sign(dc)
+    
+    for k in range(1, diag_steps + 1):
+        # Punto dopo k passi diagonali
+        mid_r, mid_c = r0 + k * ddr, r0 + k * ddc
+        
+        # Verifica diagonale fino a mid
+        if not is_path_free(g, r0, c0, ddr, ddc, k):
+            break  # Bloccato, non posso andare oltre
+        
+        # Calcola residuo ortogonale
+        rem_dr, rem_dc = r - mid_r, c - mid_c
+        
+        # Deve essere puramente ortogonale E coerente col quadrante
+        if rem_dr == 0 and rem_dc != 0:  # Orizzontale
+            if sign(rem_dc) == ddc:  # Coerente
+                if is_path_free(g, mid_r, mid_c, 0, sign(rem_dc), abs(rem_dc)):
+                    return True
+        elif rem_dc == 0 and rem_dr != 0:  # Verticale
+            if sign(rem_dr) == ddr:  # Coerente
+                if is_path_free(g, mid_r, mid_c, sign(rem_dr), 0, abs(rem_dr)):
+                    return True
+    
+    return False
+
+
+def is_type2_reachable(g: Grid, r0: int, c0: int, r: int, c: int, 
+                       dr: int, dc: int) -> bool:
+    """Tipo 2: Ortogonale→Diagonale (coerente col quadrante)"""
+    
+    # Non può essere solo ortogonale (quello è Tipo 1)
+    if dr == 0 or dc == 0:
+        return False
+    
+    # Prova ortogonale orizzontale + diagonale
+    for hor_steps in range(1, abs(dc) + 1):
+        mid_r, mid_c = r0, c0 + hor_steps * sign(dc)
+        
+        if not is_path_free(g, r0, c0, 0, sign(dc), hor_steps):
+            break
+        
+        rem_dr, rem_dc = r - mid_r, c - mid_c
+        
+        # Deve essere diagonale pura E coerente
+        if abs(rem_dr) == abs(rem_dc) and abs(rem_dr) > 0:
+            # Verifica coerenza quadrante
+            if sign(rem_dc) == sign(dc) and sign(rem_dr) * dr > 0:
+                if is_path_free(g, mid_r, mid_c, sign(rem_dr), sign(rem_dc), abs(rem_dr)):
+                    return True
+    
+    # Prova ortogonale verticale + diagonale
+    for ver_steps in range(1, abs(dr) + 1):
+        mid_r, mid_c = r0 + ver_steps * sign(dr), c0
+        
+        if not is_path_free(g, r0, c0, sign(dr), 0, ver_steps):
+            break
+        
+        rem_dr, rem_dc = r - mid_r, c - mid_c
+        
+        if abs(rem_dr) == abs(rem_dc) and abs(rem_dr) > 0:
+            if sign(rem_dr) == sign(dr) and sign(rem_dc) * dc > 0:
+                if is_path_free(g, mid_r, mid_c, sign(rem_dr), sign(rem_dc), abs(rem_dr)):
+                    return True
+    
+    return False
+
+
+def is_path_free(g: Grid, r: int, c: int, dr: int, dc: int, steps: int) -> bool:
+    """Verifica se un percorso rettilineo è libero"""
+    for _ in range(steps):
+        r += dr
+        c += dc
+        if not g.in_bounds(r, c) or not g.is_free(r, c):
+            return False
+    return True
+
+
+def sign(x: int) -> int:
+    """Ritorna il segno di x (-1, 0, 1)"""
+    return (x > 0) - (x < 0)
 
 # ---------------------------------- CARICAMENTO GRIGLIA ----------------------------------
 #carica una grilia salvata in formato csv

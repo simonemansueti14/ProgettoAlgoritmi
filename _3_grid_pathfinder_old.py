@@ -33,6 +33,9 @@ def compute_frontier(g: Grid, context: Set[Cell], complement: Set[Cell], O: Cell
     frontier: List[Tuple[Cell,int]] = [] #lista vuota che verrà riempita con le celle di frontiera trovate
     closure = context.union(complement) #unione di contesto e complemento
 
+    #debug
+    #print(f"Chiusura {closure}")
+
     #per ogni cella (r,c) della chiusura, guarda tutti i suoi 8 vicini
     for (r,c) in closure:
         for dr, dc in [(-1,0),(1,0),(0,-1),(0,1),(-1,-1),(-1,1),(1,-1),(1,1)]: #spostamento su giù ecc
@@ -105,15 +108,8 @@ def cammino_minimo(
 
     lunghezzaMin, seqMin, completed = math.inf, [], True
 
-    # Ordinamento frontiera per f(n) = g(n) + h(n)
-
-    frontier_sorted = sorted(
-        frontier,
-        key=lambda x: dlib(O, x[0]) + dlib(x[0], D)
-    )
-
     #Esplora ogni cella di frontiera
-    for F, t in frontier_sorted:
+    for F, t in frontier:
         #Controllo deadline ad ogni iterazione
         if deadline and time.perf_counter() > deadline:
             return best[0], best[1], stats, False
@@ -125,7 +121,7 @@ def cammino_minimo(
         #Se il cammino parziale + distanza stimata al target
         #è già peggiore del migliore trovato, evita la ricorsione
         if lF + dlib(F, D) >= best[0]:
-            break
+            continue
 
         #Ricorsione sul sottoproblema (F → D)
         stats["valorefalsoriga16"]+=1
@@ -308,35 +304,12 @@ def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]], blocked: Set[
 def validate_path(g: Grid, path: List[Cell]=None) -> bool:
     """
     Controlla che non ci siano ostacoli in mezzo al percorso
-        - True: se il path è valido
-        - False: altrimenti
     """
     for (r, c) in path:
         if not g.in_bounds(r, c) or not g.is_free(r, c): #se fallisce stampa messaggio e ritorna false
             print(f"[ERRORE] Cammino invalido: cella {(r,c)} non è libera")
-            return False
-    return True
-
-# ---------------------------------- VALIDAZIONE INPUT ----------------------------------
-def get_valid_cell(prompt: str, g: Grid) -> Tuple[int,int]:
-    """
-        Input sicuro con validazione.
-    """
-    while True:
-        try:
-            r = int(input(f"{prompt} - Riga (0-{g.h-1}): "))
-            c = int(input(f"{prompt} - Colonna (0-{g.w-1}): "))
-            
-            if not g.in_bounds(r, c):
-                print(f"❌ Cella ({r},{c}) fuori dai limiti!")
-                continue
-            if not g.is_free(r, c):
-                print(f"❌ Cella ({r},{c}) è un ostacolo!")
-                continue
-            
-            return (r, c)
-        except ValueError:
-            print("❌ Inserisci numeri validi!")
+            return True
+    return False
 
 
 # ---------------------------------- CARICAMENTO GRIGLIA ----------------------------------
@@ -353,15 +326,20 @@ def load_grid_from_csv(path: Path) -> Grid:
 # ---------------------------------- MAIN ----------------------------------
 def main():
     grid = input("Inserisci il percorso del file CSV della griglia: ").strip()
-    g = load_grid_from_csv(Path(grid))
-    O = get_valid_cell("Origine O ", g)
-    D = get_valid_cell("Destinazione D ", g)
+    r0 = int(input("Inserisci riga origine O: "))
+    c0 = int(input("Inserisci colonna origine O: "))
+    r1 = int(input("Inserisci riga destinazione D: "))
+    c1 = int(input("Inserisci colonna destinazione D: "))
     checkTimeOut=input("Inserisci timeout (s) per il calcolo (opzionale): ")
     timeout=None
     if checkTimeOut!='':
         timeout=float(checkTimeOut)
 
     save=input("salvataggio Json? (s/n): ").strip().lower()
+
+    g = load_grid_from_csv(Path(grid))
+    O = (r0,c0)
+    D =(r1,c1)
 
     if timeout==None: 
         deadline = None
@@ -405,8 +383,7 @@ def main():
     print(f"{d_min_info} {length}")
 
     
-    if not validate_path(g,full_path): 
-        print("Errore! Il percorso intermedio passa sopra ad ostacoli!")
+    if validate_path(g,full_path): print("Errore! Il percorso intermedio passa sopra ad ostacoli!")
 
     #riepilogo statistico
     print("\n-- Riepilogo istanza --")

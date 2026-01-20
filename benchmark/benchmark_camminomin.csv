@@ -1,0 +1,11 @@
+config_desc,size,density,version,time_ms,recursions,frontier_count,pruned_nodes,path_length,completed
+"Piccola (15x15, 15%)",15,0.15,OLD,1.371,0,0,0,8.062,True
+"Piccola (15x15, 15%)",15,0.15,NEW,1.222,0,0,0,8.062,True
+"Media (20x20, 15%)",20,0.15,OLD,4.286,0,0,0,10.050,True
+"Media (20x20, 15%)",20,0.15,NEW,5.312,0,0,0,10.050,True
+"Grande (25x25, 15%)",25,0.15,OLD,10000.749,1702,2428,0,71.400,False
+"Grande (25x25, 15%)",25,0.15,NEW,146.957,27,665,17,16.683,True
+"Densa (20x20, 25%)",20,0.25,OLD,2.921,0,0,0,5.000,True
+"Densa (20x20, 25%)",20,0.25,NEW,2.826,0,0,0,5.000,True
+"Molto Grande (30x30, 15%)",30,0.15,OLD,10002.007,1291,6328,0,34.721,False
+"Molto Grande (30x30, 15%)",30,0.15,NEW,185.371,19,1392,12,24.277,True
