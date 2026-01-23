@@ -346,6 +346,8 @@ def main():
     else:
         deadline = time.perf_counter() + timeout
 
+    start = time.perf_counter()
+
     #chiama funzione ricorsiva con deadline
     length, seq, stats, completed = cammino_minimo(g, O, D, deadline=deadline)
 
@@ -393,6 +395,9 @@ def main():
     print(f"Scelte tipo1: {stats['tipo1_count']}")
     print(f"Scelte tipo2: {stats['tipo2_count']}")
     print(f"Calcolo completato: {completed}")
+
+    elapsed = time.perf_counter() - start
+    print(f"Tempo: {elapsed:.4f}s")
 
     #salvataggio opzionale
     #print(f"Parametro per salvare cammino su file: {save}")

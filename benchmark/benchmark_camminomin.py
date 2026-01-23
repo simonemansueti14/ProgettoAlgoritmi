@@ -118,7 +118,7 @@ def cammino_minimo_OLD(g, O, D, deadline=None, blocked=None, stats=None, best=No
 
     lunghezzaMin, seqMin, completed = math.inf, [], True
 
-    # ❌ NESSUN ORDINAMENTO - esplora in ordine casuale
+
     for F, t in frontier:
         if deadline and time.perf_counter() > deadline:
             return best[0], best[1], stats, False
@@ -127,7 +127,7 @@ def cammino_minimo_OLD(g, O, D, deadline=None, blocked=None, stats=None, best=No
         lF = dlib(O, F)
 
         if lF + dlib(F, D) >= best[0]:
-            continue  # ❌ Continue invece di break
+            continue 
 
         stats["recursions"] += 1
         lFD, seqFD, stats, sub_completed = cammino_minimo_OLD(
@@ -187,7 +187,7 @@ def cammino_minimo_NEW(g, O, D, deadline=None, blocked=None, stats=None, best=No
     if not frontier:
         return math.inf, [], stats, True
 
-    # ✅ ORDINAMENTO EURISTICO
+
     frontier_sorted = sorted(
         frontier,
         key=lambda x: dlib(O, x[0]) + dlib(x[0], D)
@@ -203,10 +203,9 @@ def cammino_minimo_NEW(g, O, D, deadline=None, blocked=None, stats=None, best=No
         lF = dlib(O, F)
         h_FD = dlib(F, D)
 
-        # ✅ PRUNING AGGRESSIVO
         if lF + h_FD >= best[0]:
             stats["pruned_nodes"] += 1
-            break  # ✅ Break invece di continue
+            break
 
         stats["recursions"] += 1
         lFD, seqFD, stats, sub_completed = cammino_minimo_NEW(
@@ -242,7 +241,7 @@ class BenchmarkResult:
     completed: bool
 
 
-def benchmark_camminomin(func: Callable, g: Grid, O: Cell, D: Cell, timeout: float = 10.0) -> BenchmarkResult:
+def benchmark_camminomin(func: Callable, g: Grid, O: Cell, D: Cell, timeout: float = 30.0) -> BenchmarkResult:
     """Esegue benchmark di una funzione CAMMINOMIN"""
     deadline = time.perf_counter() + timeout
     
@@ -322,6 +321,8 @@ def run_comprehensive_benchmark():
         {"size": 25, "density": 0.15, "desc": "Grande (25x25, 15%)"},
         {"size": 20, "density": 0.25, "desc": "Densa (20x20, 25%)"},
         {"size": 30, "density": 0.15, "desc": "Molto Grande (30x30, 15%)"},
+        {"size": 40, "density": 0.20, "desc": "Molto Grande (40x40, 20%)"},
+        {"size": 50, "density": 0.30, "desc": "Molto Grande (50x50, 30%)"},
     ]
     
     results_old = []
@@ -355,17 +356,21 @@ def run_comprehensive_benchmark():
         # Benchmark VECCHIA
         print("\nEsecuzione VECCHIA versione...", end=" ", flush=True)
         res_old = benchmark_camminomin(cammino_minimo_OLD, g, O, D)
+        res_old_d_to_o = benchmark_camminomin(cammino_minimo_OLD, g, D, O)
         results_old.append(res_old)
         print(f"✓")
-        print(f"   Tempo: {res_old.time_ms:.1f} ms")
+        print(f"   Tempo O-D: {res_old.time_ms:.1f} ms")
+        print(f"   Tempo D-O: {res_old_d_to_o.time_ms:.1f} ms")
         print(f"   Ricorsioni: {res_old.recursions}")
         
         # Benchmark NUOVA
         print("\nEsecuzione NUOVA versione...", end=" ", flush=True)
         res_new = benchmark_camminomin(cammino_minimo_NEW, g, O, D)
+        res_new_d_to_o = benchmark_camminomin(cammino_minimo_NEW, g, O, D)
         results_new.append(res_new)
         print(f"✓")
-        print(f"   Tempo: {res_new.time_ms:.1f} ms")
+        print(f"   Tempo O-D: {res_new.time_ms:.1f} ms")
+        print(f"   Tempo D-O: {res_new_d_to_o.time_ms:.1f} ms")
         print(f"   Ricorsioni: {res_new.recursions}")
         print(f"   Nodi potati: {res_new.pruned_nodes}")
         

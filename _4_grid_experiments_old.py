@@ -4,6 +4,7 @@
 Compito 4 - Esperimenti su CAMMINOMIN (versione full automatica)
 Algoritmi e Strutture Dati (a.a. 2024/25)
 
+- Legge automaticamente parametri da experimental_params.json
 - Carica tutte le griglie in experimental_grid/
 - Esegue esperimenti CAMMINOMIN e sua variante
 - Confronta direzioni O→D e D→O
@@ -16,11 +17,12 @@ from typing import Tuple, List, Dict, Set
 import matplotlib.pyplot as plt
 import numpy as np
 from pathlib import Path
+from dataclasses import asdict
 from datetime import datetime
 
 from _1_grid_generator import Grid, GridConfig, generate
 from _2_grid_analysis import dlib, compute_context_and_complement
-from _3_grid_pathfinder import cammino_minimo, compute_frontier
+from _3_grid_pathfinder import cammino_minimo, build_path_from_landmarks, compute_frontier, validate_path
 
 Cell = Tuple[int,int]
 
@@ -79,49 +81,44 @@ def cammino_minimo_variant(
 
     lunghezzaMin, seqMin, completed = math.inf, [], True
 
-    # Ordinamento frontiera per f(n) = g(n) + h(n)
-
-    # ORDINAMENTO SEMPRE UGUALE (opzionale, ma consigliato)
-    frontier_sorted = sorted(frontier, key=lambda x: dlib(O, x[0]) + dlib(x[0], D))
-    
-    for F, t in frontier_sorted:
+    #Esplora ogni cella di frontiera
+    for F, t in frontier:
+        #Controllo deadline ad ogni iterazione
         if deadline and time.perf_counter() > deadline:
             return best[0], best[1], stats, False
-    
+
         stats[f"tipo{t}_count"] += 1
         lF = dlib(O, F)
-    
-        if variant == 0:
-            # Riga 16: condizione BASE (solo lF)
-            pruning_threshold = lF
-        else:  # variant == 1
-            # Riga 17: condizione FORTE (lF + euristica)
-            pruning_threshold = lF + dlib(F, D)
-    
-        # ✅ Usa la soglia scelta dalla variante
-        if pruning_threshold >= best[0]:
-            stats["pruned_nodes"] += 1
-            continue  # ⚠️ Usa CONTINUE, non BREAK (devi provare altre celle!)
-        
-        # Ricorsione
-        stats["recursions"] += 1
+
+        #Condizione euristica (riga 16 pseudocodice):
+        #Se il cammino parziale + distanza stimata al target
+        #è già peggiore del migliore trovato, evita la ricorsione
+        if lF + dlib(F, D) >= best[0]:
+            continue
+
+        #Ricorsione sul sottoproblema (F → D)
+        stats["valorefalsoriga16"]+=1
         lFD, seqFD, stats, sub_completed = cammino_minimo_variant(
             g, F, D, variant, deadline, blocked.union(closure), stats, best
         )
 
-        # Aggiorna best anche se timeout
+        #Modifica per risultato parziale deadline
         if lFD != math.inf and lF + lFD < best[0]:
-            best = (lF + lFD, [(O, 0), (F, t)] + seqFD[1:])
+            best = (lF + lFD, [(O,0),(F,t)] + seqFD[1:])
 
         if not sub_completed:
             return best[0], best[1], stats, False
-
         if lFD == math.inf:
             continue
 
-        # Aggiorna miglior cammino
+        #Calcolo della lunghezza totale
         lTot = lF + lFD
-        if lTot < lunghezzaMin:
+
+        #Variante: se variant=1, aggiunge il pezzo dlib all'if
+        toConfront = lTot if variant == 0 else lTot + dlib(F, D)
+
+        #Aggiorna il miglior cammino trovato
+        if toConfront < lunghezzaMin:
             lunghezzaMin = lTot
             seqMin = [(O, 0), (F, t)] + seqFD[1:]
             best = (lunghezzaMin, seqMin)
@@ -203,25 +200,37 @@ def auto_generate_all_grids(sizes:List, fattore_di_scala:int, timestamp):
     print("\nGenerazione completata con successo!")
 
 #Sceglie origine e destinazione più lontane possibile tra loro (buon compromesso statistico onde non riempire l'experimental_params.json a mano per centinaia di griglie)
-def choose_origin_and_dest(g: Grid) -> Tuple[Cell, Cell]:
-    """Trova celle libere più lontane possibile."""
-    free_cells = [(r, c) for r in range(g.h) for c in range(g.w) if g.is_free(r, c)]
-    
-    if len(free_cells) < 2:
-        raise RuntimeError("Meno di 2 celle libere!")
-    
-    # Trova coppia con massima distanza
-    max_dist = 0
-    best_pair = (free_cells[0], free_cells[1])
-    
-    for i, O in enumerate(free_cells):
-        for D in free_cells[i+1:]:
-            dist = dlib(O, D)
-            if dist > max_dist:
-                max_dist = dist
-                best_pair = (O, D)
-    
-    return best_pair
+def choose_origin_and_dest(g: Grid) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    """Trova origine (in alto a sinistra) e destinazione (in basso a destra) libere.
+       - Origine: scorre a destra, poi va a capo in basso.
+       - Destinazione: scorre a sinistra, poi va a capo verso l’alto.
+    """
+    h, w = g.h, g.w
+    origin = [0, 0]
+    dest = [h - 1, w - 1]
+
+    max_iters = h * w * 2
+    iters = 0
+
+    while (not g.is_free(origin[0], origin[1])) or (not g.is_free(dest[0], dest[1])):
+        #sposta l’origine (scorri a destra poi vai a capo in basso)
+        if not g.is_free(origin[0], origin[1]):
+            origin[1] += 1  # vai a destra
+            if origin[1] >= w:  # se fine riga
+                origin[1] = 0
+                origin[0] = (origin[0] + 1) % h  # vai giù di una riga
+        #sposta la destinazione (scorri a sinistra poi vai a capo verso l’alto)
+        if not g.is_free(dest[0], dest[1]):
+            dest[1] -= 1  # vai a sinistra
+            if dest[1] < 0:  # se inizio riga
+                dest[1] = w - 1
+                dest[0] = (dest[0] - 1) % h  # vai su di una riga
+
+        iters += 1
+        if iters > max_iters:
+            raise RuntimeError("Impossibile trovare celle libere per origine e destinazione")
+
+    return tuple(origin), tuple(dest)
 
 
 
