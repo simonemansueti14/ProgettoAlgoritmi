@@ -203,33 +203,38 @@ def auto_generate_all_grids(sizes:List, fattore_di_scala:int, timestamp):
     print("\nGenerazione completata con successo!")
 
 #Sceglie origine e destinazione più lontane possibile tra loro (buon compromesso statistico onde non riempire l'experimental_params.json a mano per centinaia di griglie)
-def choose_origin_and_dest(g: Grid) -> Tuple[Cell, Cell]:
-    """Trova celle libere più lontane possibile."""
-    free_cells = [(r, c) for r in range(g.h) for c in range(g.w) if g.is_free(r, c)]
-    
-    if len(free_cells) < 2:
-        raise RuntimeError("Meno di 2 celle libere!")
-    
-    # Trova coppia con massima distanza
-    max_dist = 0
-    best_pair = (free_cells[0], free_cells[1])
-    
-    for i, O in enumerate(free_cells):
-        for D in free_cells[i+1:]:
-            dist = dlib(O, D)
-            if dist > max_dist:
-                max_dist = dist
-                best_pair = (O, D)
-    
-    return best_pair
+def choose_origin_and_dest(g: Grid) -> Tuple[Tuple[int, int], Tuple[int, int]]:
+    """Trova origine (in alto a sinistra) e destinazione (in basso a destra) libere.
+       - Origine: scorre a destra, poi va a capo in basso.
+       - Destinazione: scorre a sinistra, poi va a capo verso l’alto.
+    """
+    h, w = g.h, g.w
+    origin = [0, 0]
+    dest = [h - 1, w - 1]
 
+    max_iters = h * w * 2
+    iters = 0
 
+    while (not g.is_free(origin[0], origin[1])) or (not g.is_free(dest[0], dest[1])):
+        #sposta l’origine (scorri a destra poi vai a capo in basso)
+        if not g.is_free(origin[0], origin[1]):
+            origin[1] += 1  # vai a destra
+            if origin[1] >= w:  # se fine riga
+                origin[1] = 0
+                origin[0] = (origin[0] + 1) % h  # vai giù di una riga
+        #sposta la destinazione (scorri a sinistra poi vai a capo verso l’alto)
+        if not g.is_free(dest[0], dest[1]):
+            dest[1] -= 1  # vai a sinistra
+            if dest[1] < 0:  # se inizio riga
+                dest[1] = w - 1
+                dest[0] = (dest[0] - 1) % h  # vai su di una riga
 
-# ---------------------------------- SUPPORTO STAMPA ----------------------------------
-def checkDistanzeUguali(g: Grid, O: Cell, D: Cell):
-    lOD, _, _, _ = cammino_minimo(g,O,D)
-    lDO, _, _, _ = cammino_minimo(g,D,O)
-    return lOD == lDO, lOD, lDO
+        iters += 1
+        if iters > max_iters:
+            raise RuntimeError("Impossibile trovare celle libere per origine e destinazione")
+
+    return tuple(origin), tuple(dest)
+
 
 # ---------------------------------- ESPERIMENTI AUTOMATICI ----------------------------------
 def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0, deadline:float=math.inf) -> Dict:
