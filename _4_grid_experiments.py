@@ -98,10 +98,10 @@ def cammino_minimo_variant(
             # Riga 17: condizione FORTE (lF + euristica)
             pruning_threshold = lF + dlib(F, D)
     
-        # ✅ Usa la soglia scelta dalla variante
+        # Usa la soglia scelta dalla variante
         if pruning_threshold >= best[0]:
             stats["pruned_nodes"] += 1
-            continue  # ⚠️ Usa CONTINUE, non BREAK (devi provare altre celle!)
+            continue  #Usa CONTINUE, non BREAK (devi provare altre celle!)
         
         # Ricorsione
         stats["recursions"] += 1
@@ -198,7 +198,7 @@ def auto_generate_all_grids(sizes:List, fattore_di_scala:int, timestamp):
 
                 g.save_all(base, summary)
         indexOstacoli+=1
-        print(f"✅ Cartella griglie {size}x{size} generata in → {folder}")
+        print(f"Cartella griglie {size}x{size} generata in → {folder}")
 
     print("\nGenerazione completata con successo!")
 
@@ -274,7 +274,7 @@ def run_experiments(grid_dir: Path, variant:int, trials:int=3, deadline:float=ma
     summary = {}
     for grid_csv in grid_dir.glob("*.csv"):
         grid_name = grid_csv.stem
-        print(f"\n📄 Carico {grid_name} ...")
+        print(f"\nCarico {grid_name} ...")
         g = load_grid_from_csv(grid_csv)
 
         # 🔹 Scegli automaticamente origine e destinazione
@@ -289,7 +289,7 @@ def run_experiments(grid_dir: Path, variant:int, trials:int=3, deadline:float=ma
 def summarize_results(summary: Dict):
     print("\n=== RIEPILOGO ESPERIMENTI ===")
     for gname, res in summary.items():
-        print(f"\n🧩 {gname}")
+        print(f"\n{gname}")
         for direction, vals in res.items():
             print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, completato={vals['valid']}, variant={vals['variant']}, Ricorsioni effettuate={vals['valorefalsoriga16']}")
 
@@ -317,7 +317,7 @@ def plot_results(summary: Dict, variant:int, dim:int, save_dir: Path | None=None
         fname = save_dir / f"tempi_variant{variant}_{dim}x{dim}.png"
         plt.savefig(fname, dpi=300)
         plt.close()
-        print(f"📊 Grafico tempi salvato in: {fname.name}")
+        print(f"Grafico tempi salvato in: {fname.name}")
 
     plt.show()
 
@@ -433,10 +433,10 @@ def main():
     plots_dir.mkdir(parents=True, exist_ok=True)
 
     if not grid_dir.exists():
-        print(f"❌ Cartella {grid_dir}/ non trovata.")
+        print(f" Cartella {grid_dir}/ non trovata.")
         return
     #if not param_file.exists():
-        #print("❌ File experimental_params.json non trovato.")
+        #print(" File experimental_params.json non trovato.")
         #return
 
     #with open(param_file, encoding="utf-8") as f:
@@ -480,7 +480,7 @@ def main():
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(combined_summary, f, indent=2)
 
-    print(f"\n💾 Risultati salvati in {output_file.name}")
+    print(f"\nRisultati salvati in {output_file.name}")
 
 if __name__ == "__main__":
     main()
