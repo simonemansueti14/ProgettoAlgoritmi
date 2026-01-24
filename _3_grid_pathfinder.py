@@ -328,15 +328,15 @@ def get_valid_cell(prompt: str, g: Grid) -> Tuple[int,int]:
             c = int(input(f"{prompt} - Colonna (0-{g.w-1}): "))
             
             if not g.in_bounds(r, c):
-                print(f"❌ Cella ({r},{c}) fuori dai limiti!")
+                print(f" Cella ({r},{c}) fuori dai limiti!")
                 continue
             if not g.is_free(r, c):
-                print(f"❌ Cella ({r},{c}) è un ostacolo!")
+                print(f" Cella ({r},{c}) è un ostacolo!")
                 continue
             
             return (r, c)
         except ValueError:
-            print("❌ Inserisci numeri validi!")
+            print(" Inserisci numeri validi!")
 
 
 # ---------------------------------- CARICAMENTO GRIGLIA ----------------------------------
