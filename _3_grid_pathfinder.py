@@ -124,7 +124,7 @@ def cammino_minimo(
         #Condizione euristica (riga 16 pseudocodice):
         #Se il cammino parziale + distanza stimata al target
         #è già peggiore del migliore trovato, evita la ricorsione
-        if lF + dlib(F, D) >= best[0]:
+        if lF >= best[0]:
             break
 
         #Ricorsione sul sottoproblema (F → D)
