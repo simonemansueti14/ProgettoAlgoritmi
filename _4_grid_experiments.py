@@ -41,7 +41,7 @@ def cammino_minimo_variant(
     if blocked is None:
         blocked = set()
     if stats is None:
-        stats = {"frontier_count": 0, "tipo1_count": 0, "tipo2_count": 0, "valorefalsoriga16": 0}
+        stats = {"frontier_count": 0, "tipo1_count": 0, "tipo2_count": 0, "recursions": 0}
     if best is None:
         best = (math.inf, [])
 
@@ -100,7 +100,6 @@ def cammino_minimo_variant(
     
         # Usa la soglia scelta dalla variante
         if pruning_threshold >= best[0]:
-            stats["pruned_nodes"] += 1
             continue  #Usa CONTINUE, non BREAK (devi provare altre celle!)
         
         # Ricorsione
@@ -242,7 +241,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0, deadline:
     for direction, label in [((O, D), "OtoD"), ((D, O), "DtoO")]:
         O_, D_ = direction
         lengths, times = [], []
-        frontier_counts, tipo1_counts, tipo2_counts, valorefalsoriga16 = [], [], [], []
+        frontier_counts, tipo1_counts, tipo2_counts, recursions = [], [], [], []
 
         print(label)
         for i in range(1, trials + 1):
@@ -251,14 +250,14 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0, deadline:
             length, _, stats, completed = cammino_minimo_variant(g, O_, D_, variant, deadline_assoluta)
             elapsed = time.perf_counter() - start
 
-            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']} | Ricorsioni effettuate: {stats['valorefalsoriga16']} | Completato: {completed}")
+            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']} | Ricorsioni effettuate: {stats['recursions']} | Completato: {completed}")
 
             lengths.append(length)
             times.append(elapsed)
             frontier_counts.append(stats["frontier_count"])
             tipo1_counts.append(stats["tipo1_count"])
             tipo2_counts.append(stats["tipo2_count"])
-            valorefalsoriga16.append(stats["valorefalsoriga16"])
+            recursions.append(stats["recursions"])
 
         results[label] = {
             "avg_length": statistics.mean(lengths),
@@ -266,7 +265,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0, deadline:
             "avg_frontier": statistics.mean(frontier_counts),
             "avg_tipo1": statistics.mean(tipo1_counts),
             "avg_tipo2": statistics.mean(tipo2_counts),
-            "valorefalsoriga16": statistics.mean(valorefalsoriga16),
+            "recursions": statistics.mean(recursions),
             "valid": completed,
             "variant": variant
         }
@@ -296,7 +295,7 @@ def summarize_results(summary: Dict):
     for gname, res in summary.items():
         print(f"\n{gname}")
         for direction, vals in res.items():
-            print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, completato={vals['valid']}, variant={vals['variant']}, Ricorsioni effettuate={vals['valorefalsoriga16']}")
+            print(f"  {direction}: distanza min={vals['avg_length']:.2f}, tempo medio={vals['avg_time']:.3f}s, completato={vals['valid']}, variant={vals['variant']}, Ricorsioni effettuate={vals['recursions']}")
 
 #---------------------------------------------PLOT PRESTAZIONI TEMPORALI---------------------------------------------
 def plot_results(summary: Dict, variant:int, dim:int, save_dir: Path | None=None):
@@ -329,15 +328,15 @@ def plot_results(summary: Dict, variant:int, dim:int, save_dir: Path | None=None
 #--------------------------------------------- PLOT PRESTAZIONI SPAZIALI ---------------------------------------------
 def plot_stats(summary: Dict, variant:int, dim:int, save_dir:Path | None=None):
     labels = list(summary.keys())
-    frontiere_OtoD, frontiere_DtoO, tipo1, tipo2, valorefalsoriga16_OtoD, valorefalsoriga16_DtoO = [], [], [], [], [], []
+    frontiere_OtoD, frontiere_DtoO, tipo1, tipo2, recursions_OtoD, recursions_DtoO = [], [], [], [], [], []
     for gname, res in summary.items():
         #append valori al grafico
         frontiere_OtoD.append(res["OtoD"]["avg_frontier"])
         frontiere_DtoO.append(res["DtoO"]["avg_frontier"])
         tipo1.append((res["OtoD"]["avg_tipo1"] + res["DtoO"]["avg_tipo1"]) / 2)
         tipo2.append((res["OtoD"]["avg_tipo2"] + res["DtoO"]["avg_tipo2"]) / 2)
-        valorefalsoriga16_OtoD.append(res["OtoD"]["valorefalsoriga16"])
-        valorefalsoriga16_DtoO.append(res["DtoO"]["valorefalsoriga16"])
+        recursions_OtoD.append(res["OtoD"]["recursions"])
+        recursions_DtoO.append(res["DtoO"]["recursions"])
 
     x = np.arange(len(labels))
     width = 0.13  # larghezza di ogni barra
@@ -347,8 +346,8 @@ def plot_stats(summary: Dict, variant:int, dim:int, save_dir:Path | None=None):
     plt.bar(x - 1.5*width, frontiere_DtoO, width=width, label="Frontiere individuate D→O")
     plt.bar(x - 0.5*width, tipo1, width=width, label="Scelte Tipo 1 (media O→D D→O)")
     plt.bar(x + 0.5*width, tipo2, width=width, label="Scelte Tipo 2 (media O→D D→O)")
-    plt.bar(x + 1.5*width, valorefalsoriga16_OtoD, width=width, label="ricorsioni algoritmo effettuate (O→D)")
-    plt.bar(x + 2.5*width, valorefalsoriga16_DtoO, width=width, label="ricorsioni algoritmo effettuate (D→O)")
+    plt.bar(x + 1.5*width, recursions_OtoD, width=width, label="ricorsioni algoritmo effettuate (O→D)")
+    plt.bar(x + 2.5*width, recursions_DtoO, width=width, label="ricorsioni algoritmo effettuate (D→O)")
     
 
     plt.xticks(x, labels, rotation=45, ha="right")
