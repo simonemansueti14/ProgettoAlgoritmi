@@ -80,11 +80,8 @@ def cammino_minimo_variant(
     lunghezzaMin, seqMin, completed = math.inf, [], True
 
     # Ordinamento frontiera per f(n) = g(n) + h(n)
-
-    # ORDINAMENTO SEMPRE UGUALE (opzionale, ma consigliato)
-    frontier_sorted = sorted(frontier, key=lambda x: dlib(O, x[0]) + dlib(x[0], D))
     
-    for F, t in frontier_sorted:
+    for F, t in frontier:
         if deadline and time.perf_counter() > deadline:
             return best[0], best[1], stats, False
     
