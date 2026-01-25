@@ -126,37 +126,35 @@ def cammino_minimo_variant(
 
 
 #---------------------METODO PER GENERAZIONE GRIGLIE SPERIMENTALI DA ES 1----------------------
-def auto_generate_all_grids(sizes:List, fattore_di_scala:int, timestamp):
+def auto_generate_all_grids(sizes: List[int], timestamp: str):
     base_dir = Path(__file__).parent / f"experimental_grids_es4_{timestamp}"
     base_dir.mkdir(exist_ok=True)
 
-    #tipi di ostacoli
-    obstacle_types = ["simple", "agglomerates", "diagonals", "frames", "bars"]
+    #obstacle_types = ["simple", "agglomerates", "diagonals", "bars"]
+    obstacle_types = ["frames"]
+    repliche = 5
+    densita = 0.20  # 20%
 
-    #numero di repliche per ogni tipo
-    repliche=5
-
-    #numero di ostacoli per ogni griglia
-    print(f"ostacoli che verranno generati per ogni griglia:\n")
-    n_ostacoli = []
-    i=0
+    print(f"Ostacoli che verranno generati per ogni griglia ({densita*100:.0f}%):\n")
+    
+    # numero totale di ostacoli per griglia
+    n_ostacoli_list = []
     for size in sizes:
-        n_ostacoli.append(round(size/fattore_di_scala))
-        print(f"Griglia {size}x{size} = {n_ostacoli[i]} ostacoli")
-        i+=1
+        celle_tot = size * size
+        n_ostacoli = int(celle_tot * densita)
+        n_ostacoli_list.append(n_ostacoli)
+        print(f"Griglia {size}x{size} = {n_ostacoli} ostacoli")
 
-    indexOstacoli=0
-    for size in sizes:
+    for idx, size in enumerate(sizes):
         folder = base_dir / f"{size}x{size}"
         folder.mkdir(exist_ok=True)
+        n_ostacoli_tot = n_ostacoli_list[idx]
 
         for obstacle in obstacle_types:
             for i in range(1, repliche + 1):
                 seed = random.randint(0, 99999)
                 name = f"{obstacle}_{i:02d}"
-                #print(f"  → Genero griglia: {name} (seed={seed})")
 
-                #costruisci la configurazione per questo tipo
                 cfg_kwargs = dict(
                     name=name,
                     width=size,
@@ -167,36 +165,75 @@ def auto_generate_all_grids(sizes:List, fattore_di_scala:int, timestamp):
                     diagonals=0,
                     frames=0,
                     bars=0,
-                    out_dir=str(folder),
+                    out_dir=str(folder)
                 )
 
-                # attiva solo il tipo specifico di ostacolo
+                # Calcolo numero massimo per tipo di ostacolo
                 if obstacle == "simple":
-                    cfg_kwargs["simple"] = n_ostacoli[indexOstacoli]
-                elif obstacle == "agglomerates":
-                    cfg_kwargs["agglomerates"] = n_ostacoli[indexOstacoli]
-                elif obstacle == "diagonals":
-                    cfg_kwargs["diagonals"] = n_ostacoli[indexOstacoli]
-                elif obstacle == "frames":
-                    cfg_kwargs["frames"] = n_ostacoli[indexOstacoli]
-                elif obstacle == "bars":
-                    cfg_kwargs["bars"] = n_ostacoli[indexOstacoli]
+                    cfg_kwargs["simple"] = n_ostacoli_tot
 
+                elif obstacle == "agglomerates":
+                    celle_per_cluster = 3  # cluster minimo 3 celle
+                    max_clusters = max(1, n_ostacoli_tot // celle_per_cluster)
+                    cfg_kwargs["agglomerates"] = max_clusters
+                    cfg_kwargs["agg_min"] = 3
+                    cfg_kwargs["agg_max"] = 7
+
+                elif obstacle == "diagonals":
+                    celle_per_chain = 3
+                    max_chains = max(1, n_ostacoli_tot // celle_per_chain)
+                    cfg_kwargs["diagonals"] = max_chains
+                    cfg_kwargs["diag_min"] = 3
+                    cfg_kwargs["diag_max"] = 10
+
+                elif obstacle == "bars":
+                    celle_per_bar = 4
+                    max_bars = max(1, n_ostacoli_tot // celle_per_bar)
+                    cfg_kwargs["bars"] = max_bars
+                    cfg_kwargs["bar_min"] = 4
+                    cfg_kwargs["bar_max"] = 12
+                    cfg_kwargs["bar_thick"] = 1
+
+                elif obstacle == "frames":
+                    # dimensione minima frame (3x3 è il minimo valido)
+                    frame_minw = max(3, size // 8)
+                    frame_minh = max(3, size // 8)
+                
+                    # dimensione massima (non forzata, ma limitata dalla griglia)
+                    frame_maxw = size
+                    frame_maxh = size
+                
+                    thick = 1
+                
+                    # celle occupate da un frame minimo (perimetro)
+                    perimetro_min = 2 * (frame_minw + frame_minh) - 4
+                
+                    # numero massimo di frame inseribili
+                    max_frames = max(0, n_ostacoli_tot // perimetro_min)
+                
+                    cfg_kwargs["frames"] = max_frames
+                    cfg_kwargs["frame_minw"] = frame_minw
+                    cfg_kwargs["frame_minh"] = frame_minh
+                    cfg_kwargs["frame_maxw"] = frame_maxw
+                    cfg_kwargs["frame_maxh"] = frame_maxh
+                    cfg_kwargs["frame_thick"] = thick
+
+
+                print(cfg_kwargs)
                 cfg = GridConfig(**cfg_kwargs)
                 g, summary = generate(cfg)
 
                 base = os.path.join(
                     cfg.out_dir,
-                    cfg.name if cfg.name is not None else (
-                        f"grid_{cfg.width}x{cfg.height}_seed{cfg.seed}" if cfg.seed is not None else f"grid_{cfg.width}x{cfg.height}"
-                    ),
+                    cfg.name if cfg.name else f"grid_{cfg.width}x{cfg.height}_seed{cfg.seed}"
                 )
 
                 g.save_all(base, summary)
-        indexOstacoli+=1
+
         print(f"Cartella griglie {size}x{size} generata in → {folder}")
 
     print("\nGenerazione completata con successo!")
+
 
 #Sceglie origine e destinazione più lontane possibile tra loro (buon compromesso statistico onde non riempire l'experimental_params.json a mano per centinaia di griglie)
 def choose_origin_and_dest(g: Grid) -> Tuple[Tuple[int, int], Tuple[int, int]]:
@@ -247,7 +284,7 @@ def experiment(g: Grid, O: Cell, D: Cell, trials:int=3, variant:int=0, deadline:
             length, _, stats, completed = cammino_minimo_variant(g, O_, D_, variant, deadline_assoluta)
             elapsed = time.perf_counter() - start
 
-            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']} | Ricorsioni effettuate: {stats['recursions']} | Completato: {completed}")
+            print(f"trial #{i} - tempo: {elapsed:.4f}s | frontiere={stats['frontier_count']} | tipo1={stats['tipo1_count']} | tipo2={stats['tipo2_count']} | Ricorsioni effettuate: {stats['recursions']} | Completato: {completed} | Lunghezza Min: {length}")
 
             lengths.append(length)
             times.append(elapsed)
@@ -382,7 +419,7 @@ def main():
     #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N° OSTACOLI = DIM / FATTORE
     #se si mettono griglie troppo piccole con fattore troppo alto, la griglia si riempie troppo di ostacoli, viceversa risulta estremamente sparsa.
     #impostare anche la deadline in secondi, verrà passata come start+deadline in automatico al metodo experiment()
-    #auto_generate_all_grids([20,24], 5, timestamp)
+    #auto_generate_all_grids([20,24], timestamp)
     #setDeadline = 10
 
     setDeadline = None
@@ -402,14 +439,6 @@ def main():
         print("Nessuna dimensione inserita")
         return
 
-    # fattore di scala
-    while True:
-        scale = input("Inserisci fattore di scala per gli ostacoli: ").strip()
-        if scale.isdigit() and int(scale) > 0:
-            fattore_di_scala = int(scale)
-            break
-        print("Inserisci un intero positivo!")
-
     # deadline
     while True:
         dl = input("Inserisci deadline (secondi): ").strip()
@@ -422,7 +451,7 @@ def main():
         print("Inserisci un numero positivo!")
 
     #== GENERAZIONE EFFETTIVA GRIGLIE ==
-    auto_generate_all_grids(sizes, fattore_di_scala, timestamp)
+    auto_generate_all_grids(sizes, timestamp)
 
     #cartelle griglie
     base_dir = Path(__file__).parent
@@ -436,12 +465,6 @@ def main():
     if not grid_dir.exists():
         print(f" Cartella {grid_dir}/ non trovata.")
         return
-    #if not param_file.exists():
-        #print(" File experimental_params.json non trovato.")
-        #return
-
-    #with open(param_file, encoding="utf-8") as f:
-        #param_map = json.load(f)
 
     combined_summary = {
         "variant_0": {},
