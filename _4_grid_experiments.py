@@ -126,29 +126,27 @@ def cammino_minimo_variant(
 
 
 #---------------------METODO PER GENERAZIONE GRIGLIE SPERIMENTALI DA ES 1----------------------
+
 def auto_generate_all_grids(sizes: List[int], timestamp: str):
-    base_dir = Path(__file__).parent / f"experimental_grids_es4_{timestamp}"
+    project_root = Path(__file__).parent
+    input_dir = project_root / "input_es4"
+    input_dir.mkdir(exist_ok=True)
+
+    base_dir = input_dir / f"experimental_grids_es4_{timestamp}"
     base_dir.mkdir(exist_ok=True)
 
-    #obstacle_types = ["simple", "agglomerates", "diagonals", "bars"]
-    obstacle_types = ["frames"]
+    obstacle_types = ["simple", "agglomerates", "diagonals", "bars", "frames"]
     repliche = 5
-    densita = 0.20  # 20%
+    densita = 0.20
 
     print(f"Ostacoli che verranno generati per ogni griglia ({densita*100:.0f}%):\n")
-    
-    # numero totale di ostacoli per griglia
-    n_ostacoli_list = []
-    for size in sizes:
-        celle_tot = size * size
-        n_ostacoli = int(celle_tot * densita)
-        n_ostacoli_list.append(n_ostacoli)
-        print(f"Griglia {size}x{size} = {n_ostacoli} ostacoli")
 
-    for idx, size in enumerate(sizes):
+    for size in sizes:
         folder = base_dir / f"{size}x{size}"
         folder.mkdir(exist_ok=True)
-        n_ostacoli_tot = n_ostacoli_list[idx]
+
+        budget = int(size * size * densita)
+        print(f"Griglia {size}x{size} → budget celle = {budget}")
 
         for obstacle in obstacle_types:
             for i in range(1, repliche + 1):
@@ -168,56 +166,66 @@ def auto_generate_all_grids(sizes: List[int], timestamp: str):
                     out_dir=str(folder)
                 )
 
-                # Calcolo numero massimo per tipo di ostacolo
+                # ===== STIMA CELLE & LIMITI =====
+
                 if obstacle == "simple":
-                    cfg_kwargs["simple"] = n_ostacoli_tot
+                    cfg_kwargs["simple"] = budget
 
                 elif obstacle == "agglomerates":
-                    celle_per_cluster = 3  # cluster minimo 3 celle
-                    max_clusters = max(1, n_ostacoli_tot // celle_per_cluster)
-                    cfg_kwargs["agglomerates"] = max_clusters
-                    cfg_kwargs["agg_min"] = 3
-                    cfg_kwargs["agg_max"] = 7
+                    agg_min, agg_max = 3, 7
+                    max_clusters = budget // agg_max
+                    if max_clusters == 0:
+                        continue
+                    cfg_kwargs.update({
+                        "agglomerates": max_clusters,
+                        "agg_min": agg_min,
+                        "agg_max": agg_max
+                    })
 
                 elif obstacle == "diagonals":
-                    celle_per_chain = 3
-                    max_chains = max(1, n_ostacoli_tot // celle_per_chain)
-                    cfg_kwargs["diagonals"] = max_chains
-                    cfg_kwargs["diag_min"] = 3
-                    cfg_kwargs["diag_max"] = 10
+                    diag_min, diag_max = 3, 10
+                    max_chains = budget // diag_max
+                    if max_chains == 0:
+                        continue
+                    cfg_kwargs.update({
+                        "diagonals": max_chains,
+                        "diag_min": diag_min,
+                        "diag_max": diag_max
+                    })
 
                 elif obstacle == "bars":
-                    celle_per_bar = 4
-                    max_bars = max(1, n_ostacoli_tot // celle_per_bar)
-                    cfg_kwargs["bars"] = max_bars
-                    cfg_kwargs["bar_min"] = 4
-                    cfg_kwargs["bar_max"] = 12
-                    cfg_kwargs["bar_thick"] = 1
+                    bar_min, bar_max, thick = 4, 12, 1
+                    celle_bar = bar_max * thick
+                    max_bars = budget // celle_bar
+                    if max_bars == 0:
+                        continue
+                    cfg_kwargs.update({
+                        "bars": max_bars,
+                        "bar_min": bar_min,
+                        "bar_max": bar_max,
+                        "bar_thick": thick
+                    })
 
                 elif obstacle == "frames":
-                    # dimensione minima frame (3x3 è il minimo valido)
                     frame_minw = max(3, size // 8)
                     frame_minh = max(3, size // 8)
-                
-                    # dimensione massima (non forzata, ma limitata dalla griglia)
                     frame_maxw = size
                     frame_maxh = size
-                
                     thick = 1
-                
-                    # celle occupate da un frame minimo (perimetro)
-                    perimetro_min = 2 * (frame_minw + frame_minh) - 4
-                
-                    # numero massimo di frame inseribili
-                    max_frames = max(0, n_ostacoli_tot // perimetro_min)
-                
-                    cfg_kwargs["frames"] = max_frames
-                    cfg_kwargs["frame_minw"] = frame_minw
-                    cfg_kwargs["frame_minh"] = frame_minh
-                    cfg_kwargs["frame_maxw"] = frame_maxw
-                    cfg_kwargs["frame_maxh"] = frame_maxh
-                    cfg_kwargs["frame_thick"] = thick
 
+                    perimetro_max = 2 * (frame_maxw + frame_maxh) - 4
+                    max_frames = budget // perimetro_max
+                    if max_frames == 0:
+                        continue
+
+                    cfg_kwargs.update({
+                        "frames": max_frames,
+                        "frame_minw": frame_minw,
+                        "frame_minh": frame_minh,
+                        "frame_maxw": frame_maxw,
+                        "frame_maxh": frame_maxh,
+                        "frame_thick": thick
+                    })
 
                 print(cfg_kwargs)
                 cfg = GridConfig(**cfg_kwargs)
@@ -227,12 +235,13 @@ def auto_generate_all_grids(sizes: List[int], timestamp: str):
                     cfg.out_dir,
                     cfg.name if cfg.name else f"grid_{cfg.width}x{cfg.height}_seed{cfg.seed}"
                 )
-
                 g.save_all(base, summary)
 
         print(f"Cartella griglie {size}x{size} generata in → {folder}")
 
     print("\nGenerazione completata con successo!")
+
+
 
 
 #Sceglie origine e destinazione più lontane possibile tra loro (buon compromesso statistico onde non riempire l'experimental_params.json a mano per centinaia di griglie)
@@ -416,11 +425,7 @@ def main():
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     #GENERAZIONE GRIGLIE
-    #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE, E IL FATTORE DI SCALA PER GLI OSTACOLI, PER OGNI GRIGLIA FARA' N° OSTACOLI = DIM / FATTORE
-    #se si mettono griglie troppo piccole con fattore troppo alto, la griglia si riempie troppo di ostacoli, viceversa risulta estremamente sparsa.
-    #impostare anche la deadline in secondi, verrà passata come start+deadline in automatico al metodo experiment()
-    #auto_generate_all_grids([20,24], timestamp)
-    #setDeadline = 10
+    #---- QUI METTERE LA LISTA DI DIMENSIONI NXN CHE SI VOGLIONO GENERARE
 
     setDeadline = None
     sizes = []
@@ -454,8 +459,10 @@ def main():
     auto_generate_all_grids(sizes, timestamp)
 
     #cartelle griglie
-    base_dir = Path(__file__).parent
-    grid_dir = base_dir / f"experimental_grids_es4_{timestamp}"
+    project_root = Path(__file__).parent
+    input_dir = project_root / "input_es4"
+    grid_dir = input_dir / f"experimental_grids_es4_{timestamp}"
+
     #param_file = base_dir / "experimental_params.json"
 
     #cartelle plot
