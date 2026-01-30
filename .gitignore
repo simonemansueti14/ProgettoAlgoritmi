@@ -2,3 +2,6 @@
 __pycache__/*
 *.pyc
 personal_test
+experimental_bck/*
+*.txt
+media/*
