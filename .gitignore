@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyc
+
+# Cache & history
+.history/
+
+# Progetti / output
+personal_test/
+experimental_bck/*
+media/*
+ignore*.txt

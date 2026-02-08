@@ -1,0 +1,5 @@
+Griglia,Dimensione,Variante,Direzione,Tempo_Medio(s),Tempo_Min(s),Tempo_Max(s),Memoria_Media(MB),Memoria_Min(MB),Memoria_Max(MB),Ricorsioni_Medie
+agglomerates_01,100,0,O→D,0.077318,0.077318,0.077318,0.0017,0.0017,0.0017,0.00
+agglomerates_01,100,0,D→O,300.176919,300.176919,300.176919,6.4355,6.4355,6.4355,1156.00
+agglomerates_01,100,1,O→D,0.081863,0.081863,0.081863,0.0017,0.0017,0.0017,0.00
+agglomerates_01,100,1,D→O,300.365856,300.365856,300.365856,4.4153,4.4153,4.4153,806.00
