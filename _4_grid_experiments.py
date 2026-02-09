@@ -127,7 +127,7 @@ def cammino_minimo_variant(
 
 #---------------------METODO PER GENERAZIONE GRIGLIE SPERIMENTALI DA ES 1----------------------
 
-def auto_generate_all_grids(sizes: List[int], timestamp: str):
+def auto_generate_all_grids(sizes: List[int], timestamp: str, repliche: int, densita: float):
     project_root = Path(__file__).parent
     input_dir = project_root / "input_es4"
     input_dir.mkdir(exist_ok=True)
@@ -136,8 +136,6 @@ def auto_generate_all_grids(sizes: List[int], timestamp: str):
     base_dir.mkdir(exist_ok=True)
 
     obstacle_types = ["simple", "agglomerates", "diagonals", "bars", "frames"]
-    repliche = 5
-    densita = 0.20
 
     print(f"Ostacoli che verranno generati per ogni griglia ({densita*100:.0f}%):\n")
 
@@ -443,6 +441,45 @@ def main():
     if not sizes:
         print("Nessuna dimensione inserita")
         return
+    
+    # gestione repliche
+    print("Inserire il numero di repliche:")
+
+    while True:
+        repliche_str = input("repliche = ").strip()
+
+        if repliche_str == "":
+            repliche = None      
+            break
+
+        if not repliche_str.isdigit():
+            print("Inserisci un intero positivo!")
+            continue
+
+        repliche = int(repliche_str)
+
+        if repliche <= 0:
+            print("Inserisci un intero positivo!")
+            continue
+        break
+    
+     # gestione densità
+    print("Inserire densità ostacoli (compresa tra 0 e 1):")
+
+    while True:
+        densita_str = input("densita = ").strip()
+        if densita_str == "":
+            break
+        try:
+            densita = float(densita_str)
+        except ValueError:
+            print("Inserisci un numero valido (es. 0.2, 0.5, 1.0)")
+            continue
+
+        if not (0 < densita <= 1):
+            print("La densità deve essere compresa tra 0 e 1!")
+            continue
+        break
 
     # deadline
     while True:
@@ -456,7 +493,7 @@ def main():
         print("Inserisci un numero positivo!")
 
     #== GENERAZIONE EFFETTIVA GRIGLIE ==
-    auto_generate_all_grids(sizes, timestamp)
+    auto_generate_all_grids(sizes, timestamp, repliche, densita)
 
     #cartelle griglie
     project_root = Path(__file__).parent
