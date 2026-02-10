@@ -184,92 +184,130 @@ def build_path_from_landmarks(g: Grid, seq: List[Tuple[Cell,int]], blocked: Set[
     verticals = [(-1, 0), (1, 0)]
 
     def find_type1_segment(A, B):
-        """Cerca un segmento di tipo1 da A a B. Ritorna lista di celle (escluse A, include B) o None."""
+        """
+        Tipo1: diagonali (>=0) poi rette (>=0)
+        """
         r0, c0 = A
-        r, c = B
-        maxs = max(g.h, g.w)
+        r1, c1 = B
 
-        # provare oblique k>=0 poi rette m>=0
-        for ddr, ddc in diagonals:
-            # opzionale: ottimizzazione evita diagonali contrarie, ma non necessaria
-            # proviamo k da 0 in su
-            for k in range(0, maxs):
-                start = free_path(r0, c0, ddr, ddc, k)
-                if start is None:
-                    break
-                sr, sc = start
-                if (sr, sc) == (r, c):
-                    # segmento puramente diagonale (k passi)
-                    # ricostruisco le celle percorse (escluse A)
-                    seg = []
-                    tr, tc = r0, c0
-                    for _ in range(k):
-                        tr += ddr; tc += ddc
-                        seg.append((tr, tc))
-                    return seg
-                # poi rette ammesse: (0, ddc) e (ddr, 0) come nella definizione
-                for dr, dc in [(0, ddc), (ddr, 0)]:
-                    for m in range(1, maxs):
-                        end = free_path(sr, sc, dr, dc, m)
-                        if end is None:
-                            break
-                        if end == (r, c):
-                            # ricostruisco le celle percorse: k diagonali poi m rette
-                            seg = []
-                            tr, tc = r0, c0
-                            for _ in range(k):
-                                tr += ddr; tc += ddc
-                                seg.append((tr, tc))
-                            for _ in range(m):
-                                tr += dr; tc += dc
-                                seg.append((tr, tc))
-                            return seg
-        # prova cammini puri rettilinei (k=0,m>=1) o puri diagonali già coperti
-        for dr, dc in horizontals + verticals:
-            dist = abs(r - r0) if dr != 0 else abs(c - c0)
-            if dist == 0:
-                continue
-            end = free_path(r0, c0, dr, dc, dist)
-            if end == (r, c):
-                seg = []
-                tr, tc = r0, c0
-                for _ in range(dist):
-                    tr += dr; tc += dc
-                    seg.append((tr, tc))
-                return seg
-        return None
+        dr = r1 - r0
+        dc = c1 - c0
+
+        seg = []
+        r, c = r0, c0
+
+        # ---------
+        # FASE DIAGONALE
+        # ---------
+        diag_steps = min(abs(dr), abs(dc))
+        step_r = 1 if dr > 0 else -1
+        step_c = 1 if dc > 0 else -1
+
+        for _ in range(diag_steps):
+            r += step_r
+            c += step_c
+            if not g.in_bounds(r, c) or not g.is_free(r, c):
+                return None
+            seg.append((r, c))
+
+        # aggiorno residui
+        dr_res = r1 - r
+        dc_res = c1 - c
+
+        # ---------
+        # FASE RETTILINEA
+        # ---------
+        if dr_res != 0:
+            step = 1 if dr_res > 0 else -1
+            for _ in range(abs(dr_res)):
+                r += step
+                if not g.in_bounds(r, c) or not g.is_free(r, c):
+                    return None
+                seg.append((r, c))
+
+        if dc_res != 0:
+            step = 1 if dc_res > 0 else -1
+            for _ in range(abs(dc_res)):
+                c += step
+                if not g.in_bounds(r, c) or not g.is_free(r, c):
+                    return None
+                seg.append((r, c))
+
+        if (r, c) != (r1, c1):
+            return None
+
+        return seg
+
 
     def find_type2_segment(A, B):
-        """Cerca un segmento di tipo2: rette (>=1) poi diagonali (>=1). Ritorna lista di celle (escluse A, include B) o None."""
+        """
+        Tipo2: rette (>=1) poi diagonali (>=1)
+        """
         r0, c0 = A
-        r, c = B
-        maxs = max(g.h, g.w)
+        r1, c1 = B
 
-        for dr0, dc0 in horizontals + verticals:
-            # primi m passi rettilinei, m>=1
-            for m in range(1, maxs):
-                start = free_path(r0, c0, dr0, dc0, m)
-                if start is None:
-                    break
-                sr, sc = start
-                # poi diagonali k>=1
-                for ddr, ddc in diagonals:
-                    for k in range(1, maxs):
-                        end = free_path(sr, sc, ddr, ddc, k)
-                        if end is None:
-                            break
-                        if end == (r, c):
-                            # ricostruisco: m rettilinei poi k diagonali
-                            seg = []
-                            tr, tc = r0, c0
-                            for _ in range(m):
-                                tr += dr0; tc += dc0
-                                seg.append((tr, tc))
-                            for _ in range(k):
-                                tr += ddr; tc += ddc
-                                seg.append((tr, tc))
-                            return seg
-        return None
+        dr = r1 - r0
+        dc = c1 - c0
+
+        seg = []
+        r, c = r0, c0
+
+        # Caso degenerato (non valido per tipo2)
+        if dr == 0 and dc == 0:
+            return None
+
+        # ---------
+        # FASE RETTILINEA (almeno 1 passo)
+        # ---------
+        if abs(dr) >= abs(dc):
+            # muovo prima verticalmente
+            step = 1 if dr > 0 else -1
+            first_steps = abs(dr) - min(abs(dr), abs(dc))
+            if first_steps == 0:
+                first_steps = 1
+            for _ in range(first_steps):
+                r += step
+                if not g.in_bounds(r, c) or not g.is_free(r, c):
+                    return None
+                seg.append((r, c))
+        else:
+            # muovo prima orizzontalmente
+            step = 1 if dc > 0 else -1
+            first_steps = abs(dc) - min(abs(dr), abs(dc))
+            if first_steps == 0:
+                first_steps = 1
+            for _ in range(first_steps):
+                c += step
+                if not g.in_bounds(r, c) or not g.is_free(r, c):
+                    return None
+                seg.append((r, c))
+
+        # ---------
+        # FASE DIAGONALE (almeno 1 passo)
+        # ---------
+        dr_res = r1 - r
+        dc_res = c1 - c
+
+        diag_steps = min(abs(dr_res), abs(dc_res))
+        if diag_steps == 0:
+            return None  # tipo2 richiede almeno una diagonale
+
+        step_r = 1 if dr_res > 0 else -1
+        step_c = 1 if dc_res > 0 else -1
+
+        for _ in range(diag_steps):
+            r += step_r
+            c += step_c
+            if not g.in_bounds(r, c) or not g.is_free(r, c):
+                return None
+            seg.append((r, c))
+
+        if (r, c) != (r1, c1):
+            return None
+
+        return seg
+
+
 
     # costruzione path iterando sui landmark
     full_path: List[Cell] = []
