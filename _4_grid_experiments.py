@@ -58,9 +58,8 @@ def cammino_minimo_variant(
         return 0, [], stats, True
 
     #Calcola contesto e complemento, escludendo celle già bloccate
-    context, complement = compute_context_and_complement(g, O)
-    context = {c for c in context if c not in blocked}
-    complement = {c for c in complement if c not in blocked}
+    context, complement = compute_context_and_complement(g, O, blocked)
+    
     closure = context.union(complement)
 
     #Se la destinazione è già nel contesto o complemento → cammino diretto

@@ -39,126 +39,198 @@ def dlib(o: Cell, d: Cell, cont: Set[Cell]=None, comp: Set[Cell]=None) -> float:
 
 # ---------------------------------- CONTESTO E COMPLEMENTO ----------------------------------
 #data una griglia g e una cella origine O, calcola il contesto e il complemento di O
-def compute_context_and_complement(g: Grid, O: Cell) -> Tuple[Set[Cell], Set[Cell]]:
+def compute_context_and_complement(
+    g: Grid,
+    O: Cell,
+    blocked: Set[Cell] = None
+) -> Tuple[Set[Cell], Set[Cell]]:
+
+    if blocked is None:
+        blocked = set()
+
     context: Set[Cell] = set()
     complement: Set[Cell] = set()
-    
+
     r0, c0 = O
-    
+
     if not g.in_bounds(r0, c0) or not g.is_free(r0, c0):
         raise ValueError(f"Origine {O} non valida")
-    
-    # Per ogni cella, determina se è raggiungibile e come
+
     for r in range(g.h):
         for c in range(g.w):
-            if (r, c) == O or not g.is_free(r, c):
+
+            if (r, c) == O:
                 continue
-            
-            # Calcola offset
+
+            if not g.is_free(r, c):
+                continue
+
             dr, dc = r - r0, c - c0
-            
-            # Verifica raggiungibilità Tipo 1 e Tipo 2
-            if is_type1_reachable(g, r0, c0, r, c, dr, dc):
+
+            if is_type1_reachable(g, r0, c0, r, c, dr, dc, blocked):
                 context.add((r, c))
-            elif is_type2_reachable(g, r0, c0, r, c, dr, dc):
+
+            elif is_type2_reachable(g, r0, c0, r, c, dr, dc, blocked):
                 complement.add((r, c))
-    
+
     return context, complement
 
 
-def is_type1_reachable(g: Grid, r0: int, c0: int, r: int, c: int, 
-                       dr: int, dc: int) -> bool:
-    """Tipo 1: Diagonale→Ortogonale (o solo uno dei due)"""
-    
-    # Caso 1: Solo ortogonale (stessa riga O colonna)
-    if dr == 0:  # Stessa riga
-        return is_path_free(g, r0, c0, 0, sign(dc), abs(dc))
-    if dc == 0:  # Stessa colonna
-        return is_path_free(g, r0, c0, sign(dr), 0, abs(dr))
-    
+
+def is_type1_reachable(
+    g: Grid,
+    r0: int, c0: int,
+    r: int, c: int,
+    dr: int, dc: int,
+    blocked: Set[Cell] = None
+) -> bool:
+    """Tipo 1: Diagonale → Ortogonale (o solo uno dei due)"""
+
+    if blocked is None:
+        blocked = set()
+
+    # Caso 1: Solo ortogonale
+    if dr == 0:  # stessa riga
+        return is_path_free(g, r0, c0, 0, sign(dc), abs(dc), blocked)
+
+    if dc == 0:  # stessa colonna
+        return is_path_free(g, r0, c0, sign(dr), 0, abs(dr), blocked)
+
     # Caso 2: Solo diagonale
     if abs(dr) == abs(dc):
-        if is_path_free(g, r0, c0, sign(dr), sign(dc), abs(dr)):
+        if is_path_free(g, r0, c0, sign(dr), sign(dc), abs(dr), blocked):
             return True
-    
+
     # Caso 3: Diagonale + Ortogonale
-    # Prova tutti i punti di svolta possibili sulla diagonale
     diag_steps = min(abs(dr), abs(dc))
     ddr, ddc = sign(dr), sign(dc)
-    
+
     for k in range(1, diag_steps + 1):
+
         # Punto dopo k passi diagonali
-        mid_r, mid_c = r0 + k * ddr, r0 + k * ddc
-        
+        mid_r = r0 + k * ddr
+        mid_c = c0 + k * ddc   # <<< corretto (era r0 prima!)
+
         # Verifica diagonale fino a mid
-        if not is_path_free(g, r0, c0, ddr, ddc, k):
-            break  # Bloccato, non posso andare oltre
-        
-        # Calcola residuo ortogonale
-        rem_dr, rem_dc = r - mid_r, c - mid_c
-        
-        # Deve essere puramente ortogonale E coerente col quadrante
-        if rem_dr == 0 and rem_dc != 0:  # Orizzontale
-            if sign(rem_dc) == ddc:  # Coerente
-                if is_path_free(g, mid_r, mid_c, 0, sign(rem_dc), abs(rem_dc)):
+        if not is_path_free(g, r0, c0, ddr, ddc, k, blocked):
+            break
+
+        rem_dr = r - mid_r
+        rem_dc = c - mid_c
+
+        # Orizzontale coerente
+        if rem_dr == 0 and rem_dc != 0:
+            if sign(rem_dc) == ddc:
+                if is_path_free(g, mid_r, mid_c, 0, sign(rem_dc), abs(rem_dc), blocked):
                     return True
-        elif rem_dc == 0 and rem_dr != 0:  # Verticale
-            if sign(rem_dr) == ddr:  # Coerente
-                if is_path_free(g, mid_r, mid_c, sign(rem_dr), 0, abs(rem_dr)):
+
+        # Verticale coerente
+        elif rem_dc == 0 and rem_dr != 0:
+            if sign(rem_dr) == ddr:
+                if is_path_free(g, mid_r, mid_c, sign(rem_dr), 0, abs(rem_dr), blocked):
                     return True
-    
+
     return False
 
 
-def is_type2_reachable(g: Grid, r0: int, c0: int, r: int, c: int, 
-                       dr: int, dc: int) -> bool:
-    """Tipo 2: Ortogonale→Diagonale (coerente col quadrante)"""
-    
-    # Non può essere solo ortogonale (quello è Tipo 1)
+
+def is_type2_reachable(
+    g: Grid,
+    r0: int, c0: int,
+    r: int, c: int,
+    dr: int, dc: int,
+    blocked: Set[Cell] = None
+) -> bool:
+    """Tipo 2: Ortogonale → Diagonale (coerente col quadrante)"""
+
+    if blocked is None:
+        blocked = set()
+
+    # Non può essere solo ortogonale
     if dr == 0 or dc == 0:
         return False
-    
-    # Prova ortogonale orizzontale + diagonale
+
+    # ----- Orizzontale + diagonale -----
     for hor_steps in range(1, abs(dc) + 1):
-        mid_r, mid_c = r0, c0 + hor_steps * sign(dc)
-        
-        if not is_path_free(g, r0, c0, 0, sign(dc), hor_steps):
+
+        mid_r = r0
+        mid_c = c0 + hor_steps * sign(dc)
+
+        if not is_path_free(g, r0, c0, 0, sign(dc), hor_steps, blocked):
             break
-        
-        rem_dr, rem_dc = r - mid_r, c - mid_c
-        
-        # Deve essere diagonale pura E coerente
+
+        rem_dr = r - mid_r
+        rem_dc = c - mid_c
+
         if abs(rem_dr) == abs(rem_dc) and abs(rem_dr) > 0:
-            # Verifica coerenza quadrante
-            if sign(rem_dc) == sign(dc) and sign(rem_dr) * dr > 0:
-                if is_path_free(g, mid_r, mid_c, sign(rem_dr), sign(rem_dc), abs(rem_dr)):
+
+            if sign(rem_dc) == sign(dc) and sign(rem_dr) == sign(dr):
+
+                if is_path_free(
+                    g,
+                    mid_r, mid_c,
+                    sign(rem_dr), sign(rem_dc),
+                    abs(rem_dr),
+                    blocked
+                ):
                     return True
-    
-    # Prova ortogonale verticale + diagonale
+
+    # ----- Verticale + diagonale -----
     for ver_steps in range(1, abs(dr) + 1):
-        mid_r, mid_c = r0 + ver_steps * sign(dr), c0
-        
-        if not is_path_free(g, r0, c0, sign(dr), 0, ver_steps):
+
+        mid_r = r0 + ver_steps * sign(dr)
+        mid_c = c0
+
+        if not is_path_free(g, r0, c0, sign(dr), 0, ver_steps, blocked):
             break
-        
-        rem_dr, rem_dc = r - mid_r, c - mid_c
-        
+
+        rem_dr = r - mid_r
+        rem_dc = c - mid_c
+
         if abs(rem_dr) == abs(rem_dc) and abs(rem_dr) > 0:
-            if sign(rem_dr) == sign(dr) and sign(rem_dc) * dc > 0:
-                if is_path_free(g, mid_r, mid_c, sign(rem_dr), sign(rem_dc), abs(rem_dr)):
+
+            if sign(rem_dr) == sign(dr) and sign(rem_dc) == sign(dc):
+
+                if is_path_free(
+                    g,
+                    mid_r, mid_c,
+                    sign(rem_dr), sign(rem_dc),
+                    abs(rem_dr),
+                    blocked
+                ):
                     return True
-    
+
     return False
 
 
-def is_path_free(g: Grid, r: int, c: int, dr: int, dc: int, steps: int) -> bool:
-    """Verifica se un percorso rettilineo è libero"""
+
+def is_path_free(
+    g: Grid,
+    r: int, c: int,
+    dr: int, dc: int,
+    steps: int,
+    blocked: Set[Cell] = None
+) -> bool:
+    """Verifica se un percorso rettilineo è libero
+       considerando anche le celle dinamicamente bloccate.
+    """
+
+    if blocked is None:
+        blocked = set()
+
     for _ in range(steps):
         r += dr
         c += dc
-        if not g.in_bounds(r, c) or not g.is_free(r, c):
+
+        if (
+            not g.in_bounds(r, c)
+            or not g.is_free(r, c)
+            or (r, c) in blocked
+        ):
             return False
+
     return True
+
 
 
 def sign(x: int) -> int:

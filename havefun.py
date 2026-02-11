@@ -291,6 +291,7 @@ class HaveFunApp:
         self.stats = stats
         self.stats["execution_time"] = exec_time
         self.stats["landmarks"] = seq
+        self.stats["completed"] = completed
 
         self.draw_grid()
         self.show_stats_window(length)
@@ -310,6 +311,10 @@ class HaveFunApp:
 
         content = f"""
 ================ RISULTATI =================
+
+==========================
+CAMMINO COMPLETATO: {"Sì" if self.stats.get("completed", True) else "No"}
+==========================
 
 Lunghezza cammino: {length:.6f}
 Tempo esecuzione:  {self.stats.get("execution_time",0):.6f} s
@@ -364,3 +369,17 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = HaveFunApp(root)
     root.mainloop()
+
+#piccole modifiche da apportare:
+#- se clicco calcola senza aver generato la griglia dà errore -> disattiva il pulsante "CALCOLA!!" + mostra contesto e mostra complemento finché non è stata generata una griglia
+#- cliccando di nuovo genera, deve chiudermi la finestra del riepilogo se è aperta, altrimenti si sovrappone e fa confusione
+#- campi di input se non metto niente (vuoto) o metto valori non numerici, deve dirmi di inserire numeri validi, invece ora dà errore
+#- rescaling dimensioni ostacoli con dimensioni bidimensionali (barre, frames, diagonali) -> dimensione massima almeno dim_griglia_max -1 (attualmente se metto griglia piccola con un numero di ostacoli appena altino, mi si chiude l'origine in uno spazio chiuso)
+#- controllo n° tot di celle ostacolo <= nxn -2 -> altrimenti warning "troppi ostacoli inseriti".
+
+#eventuali migliorie:
+#- pulsante per accendere/spegnere landmark
+#- pulsante per accendere/spegnere celle di frontiera dell'origine
+#- pulsalte Salva risultati salva anche jpg griglia con O, D, landmark e cammino disegnati -> dentro havefun_results creazione di ulteriore cartella: /havefun_results_TIMESTAMP/ QUI mettere sia json che jpg
+#-BONUS: generazione ostacoli con click del mouse direttamente sulla griglia.
+
