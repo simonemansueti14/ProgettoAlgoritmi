@@ -1,0 +1,118 @@
+{
+  "metadata": {
+    "timestamp": "20260129_140457",
+    "generated_at": "2026-01-29T14:47:33.134979",
+    "grid_directory": "/mnt/d/Progetti/Algoritmi/ProgettoAlgoritmi/benchmark/100x100",
+    "trials_per_test": 1,
+    "deadline_seconds": 600.0,
+    "total_grids": 1
+  },
+  "results": [
+    {
+      "grid_name": "agglomerates_03",
+      "grid_size": 100,
+      "origin": [
+        0,
+        2
+      ],
+      "destination": [
+        99,
+        99
+      ],
+      "variants": {
+        "variant_0": {
+          "OtoD": {
+            "avg_time": 600.3290807100002,
+            "min_time": 600.3290807100002,
+            "max_time": 600.3290807100002,
+            "avg_memory_mb": 13.333694458007812,
+            "min_memory_mb": 13.333694458007812,
+            "max_memory_mb": 13.333694458007812,
+            "avg_recursions": 1095.0,
+            "all_trials": [
+              {
+                "trial": 1,
+                "time": 600.3290807100002,
+                "memory_mb": 13.333694458007812,
+                "recursions": 1095,
+                "frontiers": 6597,
+                "tipo1": 412,
+                "tipo2": 691,
+                "length": 284.048773235279,
+                "completed": false
+              }
+            ]
+          },
+          "DtoO": {
+            "avg_time": 600.6451033409999,
+            "min_time": 600.6451033409999,
+            "max_time": 600.6451033409999,
+            "avg_memory_mb": 17.643028259277344,
+            "min_memory_mb": 17.643028259277344,
+            "max_memory_mb": 17.643028259277344,
+            "avg_recursions": 1207.0,
+            "all_trials": [
+              {
+                "trial": 1,
+                "time": 600.6451033409999,
+                "memory_mb": 17.643028259277344,
+                "recursions": 1207,
+                "frontiers": 7050,
+                "tipo1": 717,
+                "tipo2": 1055,
+                "length": 1145.0163773909264,
+                "completed": false
+              }
+            ]
+          }
+        },
+        "variant_1": {
+          "OtoD": {
+            "avg_time": 601.0429457169998,
+            "min_time": 601.0429457169998,
+            "max_time": 601.0429457169998,
+            "avg_memory_mb": 7.998542785644531,
+            "min_memory_mb": 7.998542785644531,
+            "max_memory_mb": 7.998542785644531,
+            "avg_recursions": 946.0,
+            "all_trials": [
+              {
+                "trial": 1,
+                "time": 601.0429457169998,
+                "memory_mb": 7.998542785644531,
+                "recursions": 946,
+                "frontiers": 19017,
+                "tipo1": 2058,
+                "tipo2": 12796,
+                "length": 284.048773235279,
+                "completed": false
+              }
+            ]
+          },
+          "DtoO": {
+            "avg_time": 600.2144042539999,
+            "min_time": 600.2144042539999,
+            "max_time": 600.2144042539999,
+            "avg_memory_mb": 18.410972595214844,
+            "min_memory_mb": 18.410972595214844,
+            "max_memory_mb": 18.410972595214844,
+            "avg_recursions": 2276.0,
+            "all_trials": [
+              {
+                "trial": 1,
+                "time": 600.2144042539999,
+                "memory_mb": 18.410972595214844,
+                "recursions": 2276,
+                "frontiers": 8847,
+                "tipo1": 1707,
+                "tipo2": 1595,
+                "length": 1144.4305909532995,
+                "completed": false
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

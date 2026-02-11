@@ -1,0 +1,25 @@
+<<<<<<< HEAD
+.history/*
+__pycache__/*
+*.pyc
+personal_test
+experimental_bck/*
+*.txt
+media/*
+=======
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyc
+
+# Cache & history
+.history/
+
+# Progetti / output
+personal_test/
+experimental_bck/*
+media/*
+ignore*.txt
+>>>>>>> 16a33d04184fb26c79ab94ff8e2c06478c3c453e
